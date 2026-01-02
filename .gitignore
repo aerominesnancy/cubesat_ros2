@@ -1,0 +1,8 @@
+# Build / Install / Log folders
+build/
+install/
+log/
+
+# Python cache
+*.pyc
+__pycache__/

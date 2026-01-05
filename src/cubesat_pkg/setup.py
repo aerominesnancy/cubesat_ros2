@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            "imu_node = cubesat_pkg.IMU_node:main"
         ],
     },
 )

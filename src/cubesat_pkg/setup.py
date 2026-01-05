@@ -11,7 +11,13 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+
+
+    install_requires=['setuptools', 
+                      'adafruit-bno055', 
+                      'adafruit-extended-bus'],
+
+
     zip_safe=True,
     maintainer='cubesat',
     maintainer_email='cubesat@todo.todo',

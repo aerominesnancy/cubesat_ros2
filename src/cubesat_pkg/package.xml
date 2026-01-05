@@ -7,7 +7,17 @@
   <maintainer email="cubesat@todo.todo">cubesat</maintainer>
   <license>TODO: License declaration</license>
 
+
+
   <depend>rclpy</depend>
+  
+  <depend>geometry_msgs</depend>
+
+  <depend>warnings</depend>
+  <depend>adafruit_extended_bus</depend>
+  <depend>adafruit_bno055</depend>
+  
+  
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "imu_node = cubesat_pkg.IMU_node:main"
+            "imu_node = cubesat_pkg.IMU_node:main",
+            "motor_node = cubesat_pkg.motor_node:main",
         ],
     },
 )

@@ -11,14 +11,23 @@ def generate_launch_description():
   # Declare a variable Node for each node
   imu_node = Node(
     package="cubesat_pkg",
-    executable="imu_node"
+    executable="imu_node",
+    parameters=[{'callback_delay_second': 1.0}]
   )
+
   motor_node = Node(
     package="cubesat_pkg",
     executable="motor_node",
     parameters=[{'pin_input_1': 20, 'pin_input_2': 21, 'pwm_pin': 16}]
   )
 
+  temp_hum_node_1 = Node(
+    package="cubesat_pkg",
+    executable="temperature_node",
+    name="temp_hum_node_1",
+    parameters=[{'sensor_number': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
+  )
+
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node,   motor_node]
+  ld = [imu_node,   motor_node, temp_hum_node_1]
   return LaunchDescription(ld)

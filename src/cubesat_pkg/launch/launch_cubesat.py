@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 import os
 
 # change log format
-os.environ['RCUTILS_LOGGING_FORMAT'] = '{time}\t[{name}] ({severity}) {message}'
+os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time}\t[{name}] {severity} \t{message}'
 
 # This function is always needed
 def generate_launch_description():

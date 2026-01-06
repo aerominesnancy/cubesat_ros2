@@ -26,8 +26,8 @@ class TemperatureHumidityNode(Node):
         self.sensor = adafruit_dht.DHT11
 
         # publishers for temperature and humidity
-        self.temp_pub = self.create_publisher(Float32, "/temp_hum_sensor/temperature"+str(self.sensor_number), 10)
-        self.hum_pub = self.create_publisher(Float32, "/temp_hum_sensor/humidity"+str(self.sensor_number), 10)
+        self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/temperature", 10)
+        self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/humidity", 10)
 
         # timer for publishing sensor values
         self.create_timer(callback_delay_second, self.send_sensor_values)

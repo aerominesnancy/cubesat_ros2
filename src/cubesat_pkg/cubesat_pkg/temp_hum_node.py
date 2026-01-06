@@ -51,10 +51,10 @@ class TemperatureHumidityNode(Node):
             msg_hum.data = float(hum)
             self.hum_pub.publish(msg_hum)
         
-            self.get_logger().info(f"Mesure capteur {temp:.2f} °C et {hum:.2f} %")
+            self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")
 
         else:
-            self.get_logger().warning(f"Échec de la lecture du capteur n°{self.sensor_number}.")
+            self.get_logger().warning(f"Failed to read sensor n°{self.sensor_number}.")
 
 
 def main(args=None):

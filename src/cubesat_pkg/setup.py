@@ -18,7 +18,8 @@ setup(
                       'adafruit-bno055', 
                       'adafruit-extended-bus',
                       "RPi.GPIO",
-                      "time"],
+                      "time",
+                      "board"],
 
 
     zip_safe=True,

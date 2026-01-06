@@ -39,6 +39,7 @@ class TemperatureHumidityNode(Node):
         self.get_logger().info(f'Temperature and Humidity node n°{self.sensor_number} has been started.')
 
     def send_sensor_values(self):
+        self.sensor.measure()
         temp, hum = self.sensor.temperature, self.sensor.humidity
 
         if hum is not None and temp is not None:

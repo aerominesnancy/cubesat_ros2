@@ -23,7 +23,7 @@ def generate_launch_description():
 
   temp_hum_node_1 = Node(
     package="cubesat_pkg",
-    executable="temperature_node",
+    executable="temp_hum_node",
     name="temp_hum_node_1",
     parameters=[{'sensor_number': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
   )

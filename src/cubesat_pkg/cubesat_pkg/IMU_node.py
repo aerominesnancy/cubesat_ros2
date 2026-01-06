@@ -51,6 +51,9 @@ def main(args=None):
     imu_node = IMU()
 
     # let the node "alive" until interrupted
-    rclpy.spin(imu_node)
-
-    rclpy.shutdown()
+    try :
+        rclpy.spin(imu_node)
+    except KeyboardInterrupt:
+        imu_node.get_logger().info('IMU node interrupted and is shutting down...')
+    finally:
+        rclpy.shutdown()

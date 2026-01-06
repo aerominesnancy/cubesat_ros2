@@ -24,20 +24,20 @@ class Motor(Node):
         super().__init__('motor')
         self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 10)
 
-        pin_R = self.declare_parameter('pin_input_1', 20).get_parameter_value().integer_value
-        pin_L = self.declare_parameter('pin_input_2', 21).get_parameter_value().integer_value
-        pin_pwm = self.declare_parameter('pwm_pin', 16).get_parameter_value().integer_value
+        self.pin_R = self.declare_parameter('pin_input_1', 20).get_parameter_value().integer_value
+        self.pin_L = self.declare_parameter('pin_input_2', 21).get_parameter_value().integer_value
+        self.pin_pwm = self.declare_parameter('pwm_pin', 16).get_parameter_value().integer_value
 
         # alimentation du moteur (choix du sens du rotation)
         GPIO.setmode(GPIO.BCM)
-        self.input_R = GPIOWrapper(pin_R)  # fil orange
-        self.input_L = GPIOWrapper(pin_L)  # fil vert
+        self.input_R = GPIOWrapper(self.pin_R)  # fil orange
+        self.input_L = GPIOWrapper(self.pin_L)  # fil vert
         self.input_R.high()
         self.input_L.low()
 
         # pwm moteur (choix de la vitesse de rotation)
-        GPIO.setup(pin_pwm, GPIO.OUT)
-        self.pwm = GPIO.PWM(pin_pwm, 100) # fil jaune
+        GPIO.setup(self.pin_pwm, GPIO.OUT)
+        self.pwm = GPIO.PWM(self.pin_pwm, 100) # fil jaune
         self.pwm.start(0)
 
         # log
@@ -52,7 +52,8 @@ class Motor(Node):
 
     def destroy_node(self):
         self.pwm.stop()
-        GPIO.cleanup()
+        GPIO.cleanup([self.pin_R, self.pin_L, self.pin_pwm])
+        self.get_logger().info('Motor GPIO cleaned up.')
 
 
 
@@ -64,7 +65,7 @@ def main(args=None):
     try :
         rclpy.spin(motor_node)
     except KeyboardInterrupt:
-        pass
-    
-    motor_node.destroy_node()
-    rclpy.shutdown()
+        motor_node.get_logger().info('Motor node interrupted and is shutting down...')
+    finally:
+        motor_node.destroy_node()
+        rclpy.shutdown()

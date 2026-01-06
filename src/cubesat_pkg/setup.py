@@ -10,8 +10,18 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['launch/launch_cubesat.py']),
     ],
-    install_requires=['setuptools'],
+
+
+    install_requires=['setuptools', 
+                      'adafruit-bno055', 
+                      'adafruit-extended-bus',
+                      "RPi.GPIO",
+                      "time",
+                      "board"],
+
+
     zip_safe=True,
     maintainer='cubesat',
     maintainer_email='cubesat@todo.todo',
@@ -22,8 +32,12 @@ setup(
             'pytest',
         ],
     },
+
     entry_points={
         'console_scripts': [
+            "imu_node = cubesat_pkg.IMU_node:main",
+            "motor_node = cubesat_pkg.motor_node:main",
+            "temp_hum_node = cubesat_pkg.temp_hum_node:main",
         ],
     },
 )

@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", message="I2C frequency is not settable in pyth
 
 from adafruit_extended_bus import ExtendedI2C as I2C
 from adafruit_bno055 import BNO055_I2C
-
+import time
 
 
 class IMU(Node):
@@ -56,4 +56,6 @@ def main(args=None):
     except KeyboardInterrupt:
         imu_node.get_logger().info('IMU node interrupted and is shutting down...')
     finally:
-        rclpy.shutdown()
+        if rclpy.ok():
+            time.sleep(1)
+            rclpy.shutdown()

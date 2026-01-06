@@ -4,6 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Vector3
 
 import RPi.GPIO as GPIO
+import time
 
 class GPIOWrapper:
     def __init__(self, pin):
@@ -68,4 +69,6 @@ def main(args=None):
         motor_node.get_logger().info('Motor node interrupted and is shutting down...')
     finally:
         motor_node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            time.sleep(1)  # wait for logs to be sent
+            rclpy.shutdown()

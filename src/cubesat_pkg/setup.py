@@ -17,7 +17,8 @@ setup(
     install_requires=['setuptools', 
                       'adafruit-bno055', 
                       'adafruit-extended-bus',
-                      "RPi.GPIO"],
+                      "RPi.GPIO",
+                      "time"],
 
 
     zip_safe=True,

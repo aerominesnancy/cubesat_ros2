@@ -18,7 +18,6 @@ class GPIOWrapper:
         GPIO.output(self.pin, GPIO.LOW)
 
 
-
 class Motor(Node):
 
     def __init__(self, callback_delay_second=1.0):

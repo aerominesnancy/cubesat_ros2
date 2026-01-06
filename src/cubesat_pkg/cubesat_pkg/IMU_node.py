@@ -52,5 +52,4 @@ def main(args=None):
     # let the node "alive" until interrupted
     rclpy.spin(imu_node)
 
-    imu_node.destroy_node()
     rclpy.shutdown()

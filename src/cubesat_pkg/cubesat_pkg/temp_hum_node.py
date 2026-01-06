@@ -41,7 +41,7 @@ class TemperatureHumidityNode(Node):
     def send_sensor_values(self):
         self.sensor.measure()
         temp, hum = self.sensor.temperature, self.sensor.humidity
-
+        self.get_logger().info(str(temp))
         if hum is not None and temp is not None:
             msg_temp = Float32()
             msg_temp.data = temp

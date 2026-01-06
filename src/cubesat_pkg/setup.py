@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['launch/launch_cubesat.py']),
     ],
 
 
@@ -29,6 +30,7 @@ setup(
             'pytest',
         ],
     },
+
     entry_points={
         'console_scripts': [
             "imu_node = cubesat_pkg.IMU_node:main",

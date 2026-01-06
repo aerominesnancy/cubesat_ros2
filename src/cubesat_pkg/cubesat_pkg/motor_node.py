@@ -22,18 +22,22 @@ class Motor(Node):
 
     def __init__(self, callback_delay_second=1.0):
         super().__init__('motor')
-        self.imu_subscriber = self.create_subscription(Vector3, '/imu/data', self.imu_callback, 10)
+        self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 10)
+
+        pin_R = self.declare_parameter('pin_input_1', 20).get_parameter_value().integer_value
+        pin_L = self.declare_parameter('pin_input_2', 21).get_parameter_value().integer_value
+        pin_pwm = self.declare_parameter('pwm_pin', 16).get_parameter_value().integer_value
 
         # alimentation du moteur (choix du sens du rotation)
         GPIO.setmode(GPIO.BCM)
-        self.input_R = GPIOWrapper(20)  # fil orange
-        self.input_L = GPIOWrapper(21)  # fil vert
+        self.input_R = GPIOWrapper(pin_R)  # fil orange
+        self.input_L = GPIOWrapper(pin_L)  # fil vert
         self.input_R.high()
         self.input_L.low()
 
         # pwm moteur (choix de la vitesse de rotation)
-        GPIO.setup(16, GPIO.OUT)
-        self.pwm = GPIO.PWM(16, 100) # fil jaune
+        GPIO.setup(pin_pwm, GPIO.OUT)
+        self.pwm = GPIO.PWM(pin_pwm, 100) # fil jaune
         self.pwm.start(0)
 
         # log
@@ -49,7 +53,6 @@ class Motor(Node):
     def destroy_node(self):
         self.pwm.stop()
         GPIO.cleanup()
-        super().destroy_node()
 
 
 

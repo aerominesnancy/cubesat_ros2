@@ -4,6 +4,7 @@ from std_msgs.msg import Float32
 
 import time
 import adafruit_dht
+import board
 
 
 class TemperatureHumidityNode(Node):
@@ -25,7 +26,7 @@ class TemperatureHumidityNode(Node):
             raise ValueError("Parameter 'callback_delay_second' must be set to a valid delay in seconds.")
 
         # create sensor instance
-        self.sensor = adafruit_dht.DHT11
+        self.sensor = adafruit_dht.DHT11(board.D4)  # pin 4 BCM numbering
 
         # publishers for temperature and humidity
         self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/temperature", 10)
@@ -38,7 +39,7 @@ class TemperatureHumidityNode(Node):
         self.get_logger().info(f'Temperature and Humidity node n°{self.sensor_number} has been started.')
 
     def send_sensor_values(self):
-        temp, hum = adafruit_dht.read(self.sensor, self.pin) # pin in BCM numbering
+        temp, hum = self.sensor.temperature, self.sensor.humidity
 
         if hum is not None and temp is not None:
             msg_temp = Float32()

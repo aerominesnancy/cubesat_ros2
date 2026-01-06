@@ -23,12 +23,12 @@ class Motor(Node):
 
     def __init__(self, callback_delay_second=1.0):
         super().__init__('motor')
-        
+
         self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 10)
 
-        self.pin_R = self.declare_parameter('pin_input_1', -1).get_parameter_value().integer_value
-        self.pin_L = self.declare_parameter('pin_input_2', -1).get_parameter_value().integer_value
-        self.pin_pwm = self.declare_parameter('pwm_pin', -1).get_parameter_value().integer_value
+        self.pin_R = self.declare_parameter('pin_input_1', -1).value
+        self.pin_L = self.declare_parameter('pin_input_2', -1).value
+        self.pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
         if self.pin_R == -1 or self.pin_L == -1 or self.pin_pwm == -1:
             raise ValueError("Motor GPIO pins must be set to valid pin numbers.")

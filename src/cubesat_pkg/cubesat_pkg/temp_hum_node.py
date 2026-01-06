@@ -7,14 +7,15 @@ import adafruit_dht
 
 
 class TemperatureHumidityNode(Node):
+
     def __init__(self):
         # this name is defined in the launch file (with a different index for each sensor)
         super().__init__("temp_hum_node")
 
         # Récupération des paramètres
-        self.sensor_number = self.declare_parameter('sensor_number', -1).get_parameter_value().integer_value
-        self.pin = self.declare_parameter('gpio_pin', -1).get_parameter_value().integer_value
-        callback_delay_second = self.declare_parameter('callback_delay_second', -1).get_parameter_value().double_value
+        self.sensor_number = self.declare_parameter('sensor_number', -1).value
+        self.pin = self.declare_parameter('gpio_pin', -1).value
+        callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
 
         if self.sensor_number == -1:
             raise ValueError("Parameter 'sensor_number' must be set to a valid sensor number.")

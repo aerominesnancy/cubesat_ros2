@@ -18,7 +18,7 @@ class IMU(Node):
     def __init__(self):
         super().__init__('imu')
 
-        callback_delay_second = self.declare_parameter('callback_delay_second', -1).get_parameter_value().double_value
+        callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
         if callback_delay_second == -1:
             raise ValueError("Parameter 'callback_delay_second' must be set to a valid delay in seconds.")
 

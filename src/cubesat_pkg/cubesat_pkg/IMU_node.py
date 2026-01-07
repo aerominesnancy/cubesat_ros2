@@ -45,9 +45,9 @@ class IMU(Node):
         
         if 0 < self.yaw or self.yaw < 360:
             self.yaw = None
-        if 0 < self.pitch or self.pitch < 360:
+        if -90 < self.pitch or self.pitch < 90:
             self.pitch = None
-        if 0 < self.roll or self.roll < 360:
+        if -180 < self.roll or self.roll < 180:
             self.roll = None 
 
 

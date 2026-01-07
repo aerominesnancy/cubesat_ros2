@@ -46,14 +46,19 @@ class IMU(Node):
 
     def send_imu_data(self):
         self.read_imu_data()
+        
+        if self.yaw is None or self.pitch is None or self.roll is None:
+            self.get_logger().warn("Failed to read IMU data.")
+            return
+        
+        else:
+            msg = Vector3()
+            msg.x = self.yaw
+            msg.y = self.pitch
+            msg.z = self.roll
 
-        msg = Vector3()
-        msg.x = float(self.yaw)
-        msg.y = float(self.pitch)
-        msg.z = float(self.roll)
-
-        self.data_pub.publish(msg) 
-        self.get_logger().info('IMU data sended : %f, %f, %f' % (msg.x, msg.y, msg.z))
+            self.data_pub.publish(msg) 
+            self.get_logger().info('IMU data sended : %f, %f, %f' % (msg.x, msg.y, msg.z))
        
 
 

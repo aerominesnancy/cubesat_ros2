@@ -19,21 +19,22 @@ class IMU(Node):
         super().__init__('imu')
 
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
+        
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
             time.sleep(1)
             rclpy.shutdown()
 
+        else:
+            # Initialise l'I2C
+            i2c = I2C(1)
+            self.sensor = BNO055_I2C(i2c, address=0x28) # sudo i2cdetect -y 1 # permet de connaitre les ports i2c detectés
 
-        # Initialise l'I2C
-        i2c = I2C(1)
-        self.sensor = BNO055_I2C(i2c, address=0x28) # sudo i2cdetect -y 1 # permet de connaitre les ports i2c detectés
-
-        self.data_pub = self.create_publisher(Vector3, '/imu/orientation', 10)
-        self.create_timer(callback_delay_second, self.send_imu_data)
-        
-        self.get_logger().info('IMU node has been started.')
+            self.data_pub = self.create_publisher(Vector3, '/imu/orientation', 10)
+            self.create_timer(callback_delay_second, self.send_imu_data)
+            
+            self.get_logger().info('IMU node has been started.')
 
 
     def read_imu_data(self):

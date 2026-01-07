@@ -43,22 +43,21 @@ class IMU(Node):
     def read_imu_data(self):
         self.yaw, self.pitch, self.roll = self.sensor.euler
         
-        if not(0 < self.yaw < 360):
-            self.yaw = None
-        if not(0 < self.pitch < 360):
-            self.pitch = None
-        if not(0 < self.roll < 360):
-            self.roll = None 
+        if self.yaw is None or self.pitch is None or self.roll is None:
+            return False
+        if not(0 < self.yaw and self.yaw < 360):
+            return False
+        if not(0 < self.pitch and self.pitch < 360):
+            return False
+        if not(0 < self.roll and self.roll < 360):
+            return False
+        return True
 
 
     def send_imu_data(self):
         self.read_imu_data()
         
-        if self.yaw is None or self.pitch is None or self.roll is None:
-            self.get_logger().warn("Failed to read IMU data.")
-            return
-        
-        else:
+        if self.read_imu_data():
             msg = Vector3()
             msg.x = self.yaw
             msg.y = self.pitch
@@ -66,6 +65,9 @@ class IMU(Node):
 
             self.data_pub.publish(msg) 
             self.get_logger().info('IMU data sended : %f, %f, %f' % (msg.x, msg.y, msg.z))
+
+        else:
+            self.get_logger().warn("Failed to read IMU data.")
        
 
 

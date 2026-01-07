@@ -15,7 +15,7 @@ import time
 
 class IMU(Node):
 
-    def __init__(self, stop_node_function):
+    def __init__(self):
         super().__init__('imu')
         self.is_valid = True
 

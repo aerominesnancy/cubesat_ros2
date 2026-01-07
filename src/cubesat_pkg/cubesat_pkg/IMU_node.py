@@ -43,11 +43,11 @@ class IMU(Node):
     def read_imu_data(self):
         self.yaw, self.pitch, self.roll = self.sensor.euler
         
-        if 0 < self.yaw or self.yaw < 360:
+        if not(0 < self.yaw < 360):
             self.yaw = None
-        if 0 < self.pitch or self.pitch < 360:
+        if not(0 < self.pitch < 360):
             self.pitch = None
-        if 0 < self.roll or self.roll < 360:
+        if not(0 < self.roll < 360):
             self.roll = None 
 
 

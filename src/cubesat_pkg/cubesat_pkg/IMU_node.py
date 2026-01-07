@@ -48,9 +48,9 @@ class IMU(Node):
         self.read_imu_data()
 
         msg = Vector3()
-        msg.x = self.yaw
-        msg.y = self.pitch
-        msg.z = self.roll
+        msg.x = float(self.yaw)
+        msg.y = float(self.pitch)
+        msg.z = float(self.roll)
 
         self.data_pub.publish(msg) 
         self.get_logger().info('IMU data sended : %f, %f, %f' % (msg.x, msg.y, msg.z))

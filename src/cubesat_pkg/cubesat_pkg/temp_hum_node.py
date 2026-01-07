@@ -16,14 +16,14 @@ class TemperatureHumidityNode(Node):
         self.is_valid = True
         
         # Récupération des paramètres
-        self.sensor_number = self.declare_parameter('sensor_number', -1).value
+        self.sensor_id = self.declare_parameter('sensor_id', -1).value
         self.pin = self.declare_parameter('gpio_pin', -1).value
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
 
         error = False
-        if self.sensor_number == -1:
-            self.get_logger().error("Parameter 'sensor_number' must be set to a valid sensor number."
-                                    + f" Current value : {self.sensor_number}")
+        if self.sensor_id == -1:
+            self.get_logger().error("Parameter 'sensor_id' must be set to a valid sensor number."
+                                    + f" Current value : {self.sensor_id}")
             error = True
 
         if self.pin == -1:
@@ -45,14 +45,14 @@ class TemperatureHumidityNode(Node):
             self.sensor = adafruit_dht.DHT11(getattr(board, f"D{self.pin}"))  # test rpi
 
             # publishers for temperature and humidity
-            self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/temperature", 10)
-            self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/humidity", 10)
+            self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/temperature", 10)
+            self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/humidity", 10)
 
             # timer for publishing sensor values
             self.create_timer(callback_delay_second, self.send_sensor_values)
 
             # log
-            self.get_logger().info(f'Temperature and Humidity node n°{self.sensor_number} has been started.')
+            self.get_logger().info(f'Temperature and Humidity node n°{self.sensor_id} has been started.')
 
     def send_sensor_values(self):
         self.sensor.measure()
@@ -70,7 +70,7 @@ class TemperatureHumidityNode(Node):
             self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")
 
         else:
-            self.get_logger().warn(f"Failed to read sensor n°{self.sensor_number}.")
+            self.get_logger().warn(f"Failed to read sensor n°{self.sensor_id}.")
 
 
 def main(args=None):
@@ -83,7 +83,7 @@ def main(args=None):
             rclpy.spin(temp_hum_node)
 
     except KeyboardInterrupt:
-        temp_hum_node.get_logger().warn(f'Temperature and Humidity node n°{temp_hum_node.sensor_number} interrupted and is shutting down...')
+        temp_hum_node.get_logger().warn(f'Temperature and Humidity node n°{temp_hum_node.sensor_id} interrupted and is shutting down...')
 
     finally:
         if rclpy.ok():  # if the node is still running

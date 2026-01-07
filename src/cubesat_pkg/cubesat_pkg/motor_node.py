@@ -41,6 +41,7 @@ class Motor(Node):
 
             # alimentation du moteur (choix du sens du rotation)
             GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
             self.input_R = GPIOWrapper(self.pin_R)  # fil orange
             self.input_L = GPIOWrapper(self.pin_L)  # fil vert
             self.input_R.high()
@@ -57,14 +58,15 @@ class Motor(Node):
     def imu_callback(self, msg:Vector3):
         self.get_logger().info('Received IMU data: %f, %f, %f' % (msg.x, msg.y, msg.z))
 
-        pwm = 100*msg.x // 360
+        pwm = 100*msg.x / 360
         self.get_logger().info(f'Setting motor speed to {pwm}' )
         self.pwm.ChangeDutyCycle(pwm)
 
     def destroy_node(self):
-        self.pwm.stop()
-        GPIO.cleanup([self.pin_R, self.pin_L, self.pin_pwm])
-        self.get_logger().info('Motor GPIO cleaned up.')
+        if self.is_valid:
+            self.pwm.stop()
+            GPIO.cleanup([self.pin_R, self.pin_L, self.pin_pwm])
+            self.get_logger().info('Motor GPIO cleaned up.')
 
 
 

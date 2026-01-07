@@ -30,8 +30,11 @@ class Motor(Node):
         self.pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
         if self.pin_R == -1 or self.pin_L == -1 or self.pin_pwm == -1:
-            raise ValueError("Motor GPIO pins must be set to valid pin numbers.")
-
+            self.get_logger().error("Motor GPIO pins must be set to valid pin numbers."
+                                    + f" Current values : pin_input_1={self.pin_R}, pin_input_2={self.pin_L}, pwm_pin={self.pin_pwm}")
+            time.sleep(1)
+            rclpy.shutdown()
+        
         # alimentation du moteur (choix du sens du rotation)
         GPIO.setmode(GPIO.BCM)
         self.input_R = GPIOWrapper(self.pin_R)  # fil orange
@@ -72,8 +75,6 @@ def main(args=None):
     except KeyboardInterrupt:
         motor_node.get_logger().info('Motor node interrupted and is shutting down...')
 
-    except ValueError as e:
-        motor_node.get_logger().error(f'[ValueError] {e}')
 
     finally:
         motor_node.destroy_node()

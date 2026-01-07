@@ -20,11 +20,22 @@ class TemperatureHumidityNode(Node):
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
 
         if self.sensor_number == -1:
-            raise ValueError("Parameter 'sensor_number' must be set to a valid sensor number.")
+            self.get_logger().error("Parameter 'sensor_number' must be set to a valid sensor number."
+                                    + f" Current value : {self.sensor_number}")
+            time.sleep(1)
+            rclpy.shutdown()
+
         if self.pin == -1:
-            raise ValueError("Parameter 'gpio_pin' must be set to a valid GPIO pin number.")
+            self.get_logger().error("Parameter 'gpio_pin' must be set to a valid GPIO pin number."
+                                    + f" Current value : {self.pin}")
+            time.sleep(1)
+            rclpy.shutdown()
+
         if callback_delay_second == -1:
-            raise ValueError("Parameter 'callback_delay_second' must be set to a valid delay in seconds.")
+            self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
+                                    + f" Current value : {callback_delay_second}")
+            time.sleep(1)
+            rclpy.shutdown()
 
         # create sensor instance
         self.sensor = adafruit_dht.DHT11(getattr(board, f"D{self.pin}"))  # test rpi
@@ -67,9 +78,6 @@ def main(args=None):
         rclpy.spin(temp_hum_node)
     except KeyboardInterrupt:
         temp_hum_node.get_logger().info(f'Temperature and Humidity node n°{temp_hum_node.sensor_number} interrupted and is shutting down...')
-    
-    except ValueError as e:
-        temp_hum_node.get_logger().error(f'[ValueError] {e}')
 
     finally:
         if rclpy.ok():  # if the node is still running

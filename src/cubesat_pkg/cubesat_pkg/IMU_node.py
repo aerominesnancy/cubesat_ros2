@@ -22,6 +22,7 @@ class IMU(Node):
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
+            time.sleep(1)
             rclpy.shutdown()
 
 
@@ -63,9 +64,6 @@ def main(args=None):
 
     except KeyboardInterrupt:
         imu_node.get_logger().info('IMU node interrupted and is shutting down...')
-
-    except ValueError as e:
-        imu_node.get_logger().error(f'[ValueError] {e}')
 
     finally:
         if rclpy.ok():  # if the node is still running

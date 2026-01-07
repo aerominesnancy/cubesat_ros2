@@ -2,6 +2,7 @@
 build/
 install/
 log/
+TO_DO_LIST
 
 # Python cache
 *.pyc

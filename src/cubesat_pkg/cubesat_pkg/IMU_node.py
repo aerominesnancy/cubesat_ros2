@@ -25,6 +25,7 @@ class IMU(Node):
                                     + f" Current value : {callback_delay_second}")
             time.sleep(1)
             rclpy.shutdown()
+            time.sleep(1)
 
         else:
             # Initialise l'I2C

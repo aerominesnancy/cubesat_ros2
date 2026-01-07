@@ -6,6 +6,13 @@ import time
 import adafruit_dht
 import board
 
+import RPi.GPIO as GPIO
+class pin:
+    def __init__(self, pin_number):
+        GPIO.setup(pin_number, GPIO.IN)
+        self.id = pin_number
+
+
 
 class TemperatureHumidityNode(Node):
 
@@ -26,7 +33,7 @@ class TemperatureHumidityNode(Node):
             raise ValueError("Parameter 'callback_delay_second' must be set to a valid delay in seconds.")
 
         # create sensor instance
-        self.sensor = adafruit_dht.DHT11(board.D4)  # pin 4 BCM numbering
+        self.sensor = adafruit_dht.DHT11(pin(4))  # test rpi
 
         # publishers for temperature and humidity
         self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_number}/temperature", 10)

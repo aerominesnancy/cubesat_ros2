@@ -15,18 +15,19 @@ import time
 
 class IMU(Node):
 
-    def __init__(self):
+    def __init__(self, stop_node_function):
         super().__init__('imu')
+        self.is_valid = True
 
+        # Récupération des paramètres
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
         
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
-            time.sleep(1)
-            rclpy.shutdown()
-            time.sleep(1)
+            self.is_valid = False
 
+        # Initialisation du node si aucune erreur de paramètre
         else:
             # Initialise l'I2C
             i2c = I2C(1)
@@ -58,11 +59,14 @@ class IMU(Node):
 
 def main(args=None):
     rclpy.init(args=args)
+
+
     imu_node = IMU()
 
     # let the node "alive" until interrupted
     try :
-        rclpy.spin(imu_node)
+        if imu_node.is_valid:
+            rclpy.spin(imu_node)
 
     except KeyboardInterrupt:
         imu_node.get_logger().info('IMU node interrupted and is shutting down...')

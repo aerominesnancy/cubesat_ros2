@@ -52,9 +52,11 @@ class camera(Node):
             # enregistre l'image avec une qualité de 50%
             cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
-            self.get_logger().info("Picture taken and saved as '{file_name}'".format(file_name=file_name))
+            self.get_logger().info(f"Picture taken and saved as '{file_name}'")
         else:
             self.get_logger().error("Failed to capture image")
+            self.cap.release()
+            self.cap = cv2.VideoCapture(0)
 
         
 

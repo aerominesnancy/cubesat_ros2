@@ -44,7 +44,7 @@ class camera(Node):
     def take_picture(self, compression_factor = 50):
         ret, frame = self.cap.read()
 
-        file_name = "test_{time.time()}.jpg"
+        file_name = f"test_{time.time()}.jpg"
 
         if ret:
             # Convertit l'image en niveaux de gris

@@ -54,7 +54,7 @@ class camera(Node):
 
             self.get_logger().info(f"Picture taken and saved as '{file_name}'")
         else:
-            self.get_logger().error("Failed to capture image, attempting to re-initialize camera...")
+            self.get_logger().warn("Failed to capture image, attempting to re-initialize camera...")
 
             try:
                 self.cap.release()
@@ -62,7 +62,7 @@ class camera(Node):
                 self.cap = cv2.VideoCapture(0)
                 time.sleep(1)
                 self.get_logger().info("Camera re-initialized successfully.")
-                
+
             except Exception as e:
                 self.get_logger().error(f"Error re-initializing camera: {e}")
             

@@ -19,7 +19,9 @@ setup(
                       'adafruit-extended-bus',
                       "RPi.GPIO",
                       "time",
-                      "board"],
+                      "board",
+                      "cv2",
+                      "os"],
 
 
     zip_safe=True,

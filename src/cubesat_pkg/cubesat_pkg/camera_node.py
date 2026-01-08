@@ -1,4 +1,4 @@
-import cv2
+
 
 
 #!/usr/bin/env python3
@@ -7,13 +7,10 @@ from rclpy.node import Node
 from geometry_msgs.msg import Vector3
 
 
-import warnings
-# Ignore les avertissements liés à la fréquence I2C
-warnings.filterwarnings("ignore", message="I2C frequency is not settable in python")
-
-from adafruit_extended_bus import ExtendedI2C as I2C
-from adafruit_bno055 import BNO055_I2C
 import time
+import cv2
+import os
+
 
 
 class camera(Node):
@@ -37,15 +34,25 @@ class camera(Node):
 
             self.create_timer(callback_delay_second, self.take_picture)
 
+            # create directory to save pictures if it doesn't exist
+            self.path = "/home/cubesat/ros2_ws/pictures/"
+            os.makedirs(self.path, exist_ok=True)
+
             self.get_logger().info('Camera node has been started.')
 
 
-    def take_picture(self, path = "/home/cubesat/ros2_ws/pictures/"):
+    def take_picture(self, compression_factor = 50):
         ret, frame = self.cap.read()
 
+        file_name = "test_{time.time()}.jpg"
+
         if ret:
-            cv2.imwrite(path + f"test_{time.time()}.jpg", frame)
-            self.get_logger().info("Picture taken and saved as 'test.jpg'")
+            # Convertit l'image en niveaux de gris
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # enregistre l'image avec une qualité de 50%
+            cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+
+            self.get_logger().info("Picture taken and saved as '{file_name}'".format(file_name=file_name))
         else:
             self.get_logger().error("Failed to capture image")
 

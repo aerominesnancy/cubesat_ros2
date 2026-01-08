@@ -55,8 +55,11 @@ class camera(Node):
             self.get_logger().info(f"Picture taken and saved as '{file_name}'")
         else:
             self.get_logger().error("Failed to capture image")
+
             self.cap.release()
+            time.sleep(1)
             self.cap = cv2.VideoCapture(0)
+            time.sleep(1)
 
         
 

@@ -23,12 +23,12 @@ class camera(Node):
         self.is_valid = True
 
         # Récupération des paramètres
-        callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
+        callback_delay_second = self.declare_parameter('callback_delay_second', -1).value
         
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
-            self.get_logger().warn("IMU node is shutting down...")
+            self.get_logger().warn("Camera node is shutting down...")
             self.is_valid = False
 
         # Initialisation du node si aucune erreur de paramètre
@@ -49,7 +49,7 @@ class camera(Node):
         else:
             self.get_logger().error("Failed to capture image")
 
-        self.cap.release()
+        
 
 
 
@@ -73,6 +73,7 @@ def main(args=None):
     finally:
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent
+            camera_node.cap.release()
             rclpy.shutdown()
 
 

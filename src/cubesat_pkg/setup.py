@@ -38,6 +38,7 @@ setup(
             "imu_node = cubesat_pkg.IMU_node:main",
             "motor_node = cubesat_pkg.motor_node:main",
             "temp_hum_node = cubesat_pkg.temp_hum_node:main",
+            "camera_node = cubesat_pkg.camera_node:main"
         ],
     },
 )

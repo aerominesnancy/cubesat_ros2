@@ -58,8 +58,8 @@ class Motor(Node):
     def imu_callback(self, msg:Vector3):
         self.get_logger().info('Received IMU data: %f, %f, %f' % (msg.x, msg.y, msg.z))
 
-        pwm = 100*msg.x / 360
-        self.get_logger().info(f'Setting motor speed to {pwm}' )
+        pwm = int(100*msg.x / 360)
+        self.get_logger().info(f"Setting motor speed to {pwm}%" )
         self.pwm.ChangeDutyCycle(pwm)
 
     def destroy_node(self):

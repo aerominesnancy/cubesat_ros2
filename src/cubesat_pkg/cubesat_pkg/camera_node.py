@@ -23,7 +23,7 @@ class camera(Node):
         self.is_valid = True
 
         # Récupération des paramètres
-        callback_delay_second = self.declare_parameter('callback_delay_second', -1).value
+        callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
         
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
@@ -44,7 +44,7 @@ class camera(Node):
         ret, frame = self.cap.read()
 
         if ret:
-            cv2.imwrite(path + "test.jpg", frame)
+            cv2.imwrite(path + f"test_{time.time()}.jpg", frame)
             self.get_logger().info("Picture taken and saved as 'test.jpg'")
         else:
             self.get_logger().error("Failed to capture image")

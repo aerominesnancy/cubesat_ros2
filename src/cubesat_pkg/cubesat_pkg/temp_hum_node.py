@@ -45,8 +45,8 @@ class TemperatureHumidityNode(Node):
             self.sensor = adafruit_dht.DHT11(getattr(board, f"D{self.pin}"))  # test rpi
 
             # publishers for temperature and humidity
-            self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/temperature", 10)
-            self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/humidity", 10)
+            self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/temperature", 1)
+            self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/humidity", 1)
 
             # timer for publishing sensor values
             self.create_timer(callback_delay_second, self.send_sensor_values)

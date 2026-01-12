@@ -34,7 +34,7 @@ class IMU(Node):
             i2c = I2C(1)
             self.sensor = BNO055_I2C(i2c, address=0x28) # sudo i2cdetect -y 1 # permet de connaitre les ports i2c detectés
 
-            self.data_pub = self.create_publisher(Vector3, '/imu/orientation', 10)
+            self.data_pub = self.create_publisher(Vector3, '/imu/orientation', 1)
             self.create_timer(callback_delay_second, self.send_imu_data)
             
             self.get_logger().info('IMU node has been started.')

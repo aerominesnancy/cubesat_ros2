@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 
 import os
 # change log format
-os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '{time}\t{severity} \t{message}'
+os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time} [{severity}] [{name}] \t{message}'
 
 
 # This function is always needed

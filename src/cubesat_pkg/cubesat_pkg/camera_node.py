@@ -45,35 +45,38 @@ class camera(Node):
 
 
     def take_picture(self, compression_factor = 50):
-        if self.cap is not None and not self.cap.isOpened():
+        if self.cap is not None:
+            if self.cap.isOpened():
 
-            ret, frame = self.cap.read()
+                ret, frame = self.cap.read()
 
-            file_name = f"test_{time.time()}.jpg"
+                file_name = f"test_{time.time()}.jpg"
 
-            if ret:
-                # Convertit l'image en niveaux de gris
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # enregistre l'image avec une qualité de 50%
-                cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                if ret:
+                    # Convertit l'image en niveaux de gris
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    # enregistre l'image avec une qualité de 50%
+                    cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
-                self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+                    self.get_logger().info(f"Picture taken and saved as '{file_name}'")
 
-                return
+                    return
+                else:
+                    self.get_logger().warn("Failed to capture image from camera. Attempting to reconnect...")
+                    self.cap.release()
+                    self.cap = None
+
             else:
-                self.get_logger().warn("Failed to capture image from camera.")
-
+                self.get_logger().warn("Connection to camera lost. Attempting to reconnect...")
+                self.cap.release()
+                self.cap = None
+            
+        
         # if the image was not captured successfully
         self.try_reconnect()
 
 
     def try_reconnect(self):
-
-        self.get_logger().warn("Attempting to re-initialize the camera...")
-        
-        # release the camera and wait before re-initializing
-        self.cap.release()
-        time.sleep(0.5)
 
         # try reconnecting to the camera
         self.cap = cv2.VideoCapture(0)
@@ -84,6 +87,8 @@ class camera(Node):
             self.get_logger().warn("Camera re-initialized successfully.")
         else: 
             self.get_logger().error(f"Error re-initializing camera. Camera may be disconnected.")
+            self.cap.release()
+            self.cap = None
 
             
         

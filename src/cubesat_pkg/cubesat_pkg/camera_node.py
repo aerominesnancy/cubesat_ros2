@@ -8,10 +8,11 @@ from geometry_msgs.msg import Vector3
 
 
 import time
-import cv2
 import os
+
 # Suppress OpenCV warnings
-#os.environ["OPENCV_LOG_LEVEL"] = "ERROR"
+os.environ["OPENCV_LOG_LEVEL"] = "ERROR"
+import cv2
 
 
 
@@ -44,34 +45,46 @@ class camera(Node):
 
 
     def take_picture(self, compression_factor = 50):
-        ret, frame = self.cap.read()
+        if self.cap is not None and not self.cap.isOpened():
 
-        file_name = f"test_{time.time()}.jpg"
+            ret, frame = self.cap.read()
 
-        if ret:
-            # Convertit l'image en niveaux de gris
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            # enregistre l'image avec une qualité de 50%
-            cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+            file_name = f"test_{time.time()}.jpg"
 
-            self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+            if ret:
+                # Convertit l'image en niveaux de gris
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # enregistre l'image avec une qualité de 50%
+                cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
-        else:
-            self.get_logger().warn("Failed to capture image, attempting to re-initialize camera...")
-            
-            # release the camera and wait before re-initializing
-            self.cap.release()
-            time.sleep(0.5)
+                self.get_logger().info(f"Picture taken and saved as '{file_name}'")
 
-            # try reconnecting to the camera
-            self.cap = cv2.VideoCapture(0)
-            time.sleep(0.5)
+                return
+            else:
+                self.get_logger().warn("Failed to capture image from camera.")
 
-            # check if the camera has been successfully reconnected
-            if self.cap.isOpened():
-                self.get_logger().warn("Camera re-initialized successfully.")
-            else: 
-                self.get_logger().error(f"Error re-initializing camera. Camera may be disconnected.")
+        # if the image was not captured successfully
+        self.try_reconnect()
+
+
+    def try_reconnect(self):
+
+        self.get_logger().warn("Attempting to re-initialize the camera...")
+        
+        # release the camera and wait before re-initializing
+        self.cap.release()
+        time.sleep(0.5)
+
+        # try reconnecting to the camera
+        self.cap = cv2.VideoCapture(0)
+        time.sleep(0.5)
+
+        # check if the camera has been successfully reconnected
+        if self.cap.isOpened():
+            self.get_logger().warn("Camera re-initialized successfully.")
+        else: 
+            self.get_logger().error(f"Error re-initializing camera. Camera may be disconnected.")
+
             
         
 

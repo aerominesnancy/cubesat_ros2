@@ -90,6 +90,10 @@ class camera(Node):
             self.cap.release()
             self.cap = None
 
+    def destroy_node(self):
+        if self.is_valid:
+            self.cap.release()
+
             
         
 
@@ -115,7 +119,7 @@ def main(args=None):
     finally:
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent
-            camera_node.cap.release()
+            camera.destroy_node()
             rclpy.shutdown()
 
 

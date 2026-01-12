@@ -10,6 +10,8 @@ from geometry_msgs.msg import Vector3
 import time
 import cv2
 import os
+# Suppress OpenCV warnings
+#os.environ["OPENCV_LOG_LEVEL"] = "ERROR"
 
 
 
@@ -53,18 +55,23 @@ class camera(Node):
             cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
             self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+
         else:
             self.get_logger().warn("Failed to capture image, attempting to re-initialize camera...")
+            
+            # release the camera and wait before re-initializing
+            self.cap.release()
+            time.sleep(0.5)
 
-            try:
-                self.cap.release()
-                time.sleep(1)
-                self.cap = cv2.VideoCapture(0)
-                time.sleep(1)
-                self.get_logger().info("Camera re-initialized successfully.")
+            # try reconnecting to the camera
+            self.cap = cv2.VideoCapture(0)
+            time.sleep(0.5)
 
-            except Exception as e:
-                self.get_logger().error(f"Error re-initializing camera: {e}")
+            # check if the camera has been successfully reconnected
+            if self.cap.isOpened():
+                self.get_logger().warn("Camera re-initialized successfully.")
+            else: 
+                self.get_logger().error(f"Error re-initializing camera. Camera may be disconnected.")
             
         
 

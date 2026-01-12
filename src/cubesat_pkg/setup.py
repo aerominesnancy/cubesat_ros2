@@ -41,7 +41,7 @@ setup(
             "motor_node = cubesat_pkg.motor_node:main",
             "temp_hum_node = cubesat_pkg.temp_hum_node:main",
             "camera_node = cubesat_pkg.camera_node:main",
-            "lora_node = cubesat_pkg.LoRa.lora_node:main",
+            "lora_node = cubesat_pkg.lora_node:main",
             "heater_node = cubesat_pkg.heater_node:main",
         ],
     },

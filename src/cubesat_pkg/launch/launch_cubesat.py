@@ -5,13 +5,14 @@ from launch.actions import SetEnvironmentVariable
 # launch_ros module includes elements to launch ROS 2 processes and actions
 from launch_ros.actions import Node
 
-
+import os
+# change log format
+os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '{time}\t{severity} \t{message}'
 
 
 # This function is always needed
 def generate_launch_description():
   SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1'),
-  SetEnvironmentVariable('RCUTILS_CONSOLE_OUTPUT_FORMAT', '{time}\t{severity} [{name}] \t{message}'),
   
   # Declare a variable Node for each node
   imu_node = Node(

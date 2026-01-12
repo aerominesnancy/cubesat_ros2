@@ -10,23 +10,11 @@ configuration du module disponible dans la datasheet.
 Il est important de vérifier que la configuration est la même pour les 2 modules LoRa utilisés (émetteur et récepteur).
 """
 
-print("lancement programme")
-
 # ============================ GPIO Setup ============================
 
 M0 = 17
 M1 = 27
 AUX = 22
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(M0, GPIO.OUT)
-GPIO.setup(M1, GPIO.OUT)
-GPIO.setup(AUX, GPIO.IN)
-
-ser = serial.Serial(port='/dev/serial0',  # Raspberry Pi UART
-                    baudrate=9600,
-                    timeout=1)
 
 # ========================= Datasheet values =========================
 
@@ -125,7 +113,7 @@ def wait_aux():
         print("busy",i)
         i += 1
         time.sleep(0.01)
-    print("ok\n")
+    print("AUX ok !\n")
 
 
 
@@ -159,7 +147,7 @@ def read_configuration_33S():
             print("/!\ \tla requete n'a pas un format valide")
         else:
             
-            print("\n================ Response ================")
+            print("\n========================== Response ==========================")
             print(response)
             print(f"CMD : {response[0]:02X}")
             print(f"start:{response[1]}\t\tend : {response[2]}")
@@ -197,7 +185,7 @@ def read_configuration_33S():
 
             print(f"\nCRYPT_H : {response[10]}\tCRYPT_L : {response[11]}")
             
-            print("==========================================\n")
+            print("==============================================================\n")
     else:
         print("Aucune réponse du module")
 
@@ -205,9 +193,28 @@ def read_configuration_33S():
     GPIO.output(M1, GPIO.LOW)
 
 
+if __name__ == "__main__":
 
-read_configuration_33S()
+    print("Run program ...")
 
+    # init GPIO
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(M0, GPIO.OUT)
+    GPIO.setup(M1, GPIO.OUT)
+    GPIO.setup(AUX, GPIO.IN)
+
+    # init serial connection
+    ser = serial.Serial(port='/dev/serial0',  # Raspberry Pi UART
+                        baudrate=9600,
+                        timeout=1)
+
+    # read configuration
+    read_configuration_33S()
+
+    # Clean up GPIO
+    GPIO.cleanup()
+    print("\n End of program.")
 
 
 

@@ -10,7 +10,8 @@ class lora(Node):
 
     def __init__(self):
         super().__init__('lora_node')
-        self.is_valid = False  # to be updated later
+        self.is_valid = True
+
         self.get_logger().info('lora node has been started.')
 
 

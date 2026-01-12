@@ -6,12 +6,12 @@ from launch_ros.actions import Node
 
 import os
 
-# change log format
-os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '{time}\t{severity} [{name}] \t{message}'
 
 # This function is always needed
 def generate_launch_description():
-
+  SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1'),
+  SetEnvironmentVariable('RCUTILS_CONSOLE_OUTPUT_FORMAT', '{time}\t{severity} [{name}] \t{message}'),
+  
   # Declare a variable Node for each node
   imu_node = Node(
     package="cubesat_pkg",
@@ -29,7 +29,7 @@ def generate_launch_description():
     package="cubesat_pkg",
     executable="temp_hum_node",
     name="temp_hum_sensor_1",
-    parameters=[{'sensor_number': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
+    parameters=[{'sensor_id': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
   )
 
   camera_node = Node(

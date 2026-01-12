@@ -1,10 +1,11 @@
 # launch module includes elements to launch all types of processes and actions
 from launch import LaunchDescription
+from launch.actions import SetEnvironmentVariable
 
 # launch_ros module includes elements to launch ROS 2 processes and actions
 from launch_ros.actions import Node
 
-import os
+
 
 
 # This function is always needed

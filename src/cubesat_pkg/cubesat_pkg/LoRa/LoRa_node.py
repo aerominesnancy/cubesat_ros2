@@ -94,8 +94,6 @@ class lora(Node):
     def receive_message(self):
     
         if self.ser.in_waiting > 0:
-            self.wait_aux()
-            time.sleep(1)
             message = self.ser.read(self.ser.in_waiting).decode('utf-8')
             self.get_logger().info(f"Received message: {message}")
             return message

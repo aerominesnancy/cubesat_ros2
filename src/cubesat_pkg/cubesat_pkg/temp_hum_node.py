@@ -22,17 +22,17 @@ class TemperatureHumidityNode(Node):
 
         error = False
         if self.sensor_id == -1:
-            self.get_logger().error("Parameter 'sensor_id' must be set to a valid sensor number."
+            self.get_logger().fatal("Parameter 'sensor_id' must be set to a valid sensor number."
                                     + f" Current value : {self.sensor_id}")
             error = True
 
         if self.pin == -1:
-            self.get_logger().error("Parameter 'gpio_pin' must be set to a valid GPIO pin number."
+            self.get_logger().fatal("Parameter 'gpio_pin' must be set to a valid GPIO pin number."
                                     + f" Current value : {self.pin}")
             error = True
 
         if callback_delay_second == -1:
-            self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
+            self.get_logger().fatal("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
             error = True
 

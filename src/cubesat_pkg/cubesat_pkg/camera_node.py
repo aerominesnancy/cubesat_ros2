@@ -26,7 +26,7 @@ class camera(Node):
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
         
         if callback_delay_second == -1:
-            self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
+            self.get_logger().fatal("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
             self.get_logger().warn("Camera node is shutting down...")
             self.is_valid = False

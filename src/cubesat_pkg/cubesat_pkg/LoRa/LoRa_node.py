@@ -5,6 +5,8 @@ from rclpy.node import Node
 import serial
 import RPi.GPIO as GPIO
 import time
+from cubesat_pkg.LoRa.LoRa_data_encapsulation import encapsulate, Buffer
+
 
 
 class lora(Node):
@@ -22,12 +24,12 @@ class lora(Node):
         self.serial_timeout = 5  # seconds
 
         if self.loop_delay_milisecond == -1:
-            self.get_logger().error("Parameter 'loop_delay_milisecond' must be set to a positive float."
+            self.get_logger().fatal("Parameter 'loop_delay_milisecond' must be set to a positive float."
                                     + f" Current value : {self.loop_delay_milisecond}")
             self.is_valid = False
 
         if self.M0 == -1 or self.M1 == -1 or self.AUX == -1:
-            self.get_logger().error("LoRa GPIO pins must be set to valid pin numbers."
+            self.get_logger().fatal("LoRa GPIO pins must be set to valid pin numbers."
                                     + f" Current values : M0={self.M0}, M1={self.M1}, AUX={self.AUX}")
             self.is_valid = False
 
@@ -51,6 +53,9 @@ class lora(Node):
             # create loop timer
             self.create_timer(self.loop_delay_milisecond/1000, self.loop)
 
+            # buffer for incoming messages
+            self.buffer = Buffer()
+
             self.get_logger().info('lora node has been started.')
 
 
@@ -71,15 +76,15 @@ class lora(Node):
         
 
 
-    def send_string(self, message: str):
+    def send_message(self, message: str):
         
         if not self.wait_aux():
             self.get_logger().error("Cannot send message because LoRa module is not ready.")
             return  # cannot send if AUX is not HIGH
 
         try:
-            self.ser.write(message.encode('utf-8'))
-            #self.ser.flush()   # ensure data is sent but blocks the program and bypass timeout handling
+            self.ser.write(encapsulate(message))
+            #self.ser.flush()   # this line ensure data is sent but blocks the program and bypass timeout handling 
         except serial.SerialTimeoutException:
             self.get_logger().error("Error sending message: Serial timeout.")
 
@@ -91,24 +96,27 @@ class lora(Node):
         self.get_logger().info(f"Message envoyé : {message}")
 
     
-    def receive_message(self):
+    def read_data(self):
     
         if self.ser.in_waiting > 0:
-            message = self.ser.read(self.ser.in_waiting).decode('utf-8')
-            self.get_logger().info(f"Received message: {message}")
-            return message
+            bytes_msg = self.ser.read(self.ser.in_waiting)
+            self.buffer.append(bytes_msg)
+            self.get_logger().info(f"Received some data. Buffer size: {self.buffer.size} bytes.")
         else:
             #self.get_logger().info(f"No message received.")
-            return None  # no message received
+            pass
         
 
     def loop(self):
+
+
         # recover any incoming messages
-        received = self.receive_message()
-        if received:
-            self.send_string(f"Echo: {received}")
-
-
+        self.read_data()
+        
+        # read buffer for complete messages
+        message = self.buffer.extract_message()
+        if message is not None:
+            self.get_logger().info(f"Complete message received: {message}")
 
     
     def destroy_node(self):

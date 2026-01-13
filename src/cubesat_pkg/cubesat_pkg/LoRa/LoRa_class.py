@@ -1,99 +1,188 @@
 import struct
+import serial
+import time
+import RPi.GPIO as GPIO
+import rclpy
 
-def encapsulate(message) -> bytes:
-    """ 
-    [Marqueur de début (2 octets)]
-    [Type de données (1 octet)]
-    [Longueur (2 octets)]
-    [Données (N octets)]
-    [Marqueur de fin (2 octets)]
-    """
+class LoRa():
     START_MARKER = b'\xAA\xBB'  # Marqueur de début
     END_MARKER = b'\xCC\xDD'    # Marqueur de fin
+    type_to_id = {0x01: int(),
+                  0x02: str()}
+    id_to_type = {v: k for k, v in type_to_id.items()}
 
-    # Détermination du type de données et conversion en bytes
-    if isinstance(message, int):
-        data_type = 0x01
-        data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
-    elif isinstance(message, str):
-        data_type = 0x02
-        data_bytes = message.encode('utf-8')
-    else:
-        raise ValueError(f"Type de données {type(message)} non supporté.")
+    def __init__(self, M0_pin: int, M1_pin: int, AUX_pin: int, 
+                 AUX_timeout: float, serial_timeout: float,
+                 logger=None):
+        self.logger = logger
+
+        self.M0 = M0_pin
+        self.M1 = M1_pin
+        self.AUX = AUX_pin
+
+        self.AUX_timeout = AUX_timeout
+        self.serial_timeout = serial_timeout
+        
+
+        # setup GPIO
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        GPIO.setup(self.M0, GPIO.OUT)
+        GPIO.setup(self.M1, GPIO.OUT)
+        GPIO.setup(self.AUX, GPIO.IN)
+
+        # Normal mode (transmission and reception)
+        GPIO.output(self.M0, GPIO.LOW)
+        GPIO.output(self.M1, GPIO.LOW)
+
+        # setup serial connection
+        self.ser = serial.Serial(port='/dev/serial0', baudrate=9600, timeout=self.serial_timeout)
+
+        # create buffer for incoming messages
+        self.buffer = Buffer(self.START_MARKER, self.END_MARKER,
+                             self.type_to_id,
+                             self.logger)
+
+
+    def wait_aux(self):
+        """Waits until the AUX pin goes HIGH, indicating that the LoRa module is ready."""
+
+        start_time = time.time()
+
+        while (GPIO.input(self.AUX) == GPIO.LOW) and (time.time() - start_time < self.AUX_timeout):
+            time.sleep(0.1)
+        
+        if GPIO.input(self.AUX) == GPIO.LOW:
+            self.get_logger().warn("Timeout waiting for LoRa module to be ready (AUX pin HIGH).")
+            return False
+        
+        return True
     
-    length = len(data_bytes)
 
-    return START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
+    def send_radio(self, message: str):
+        
+        if not self.wait_aux():
+            self.get_logger().error("Cannot send message because LoRa module is not ready.")
+            return  # cannot send if AUX is not HIGH
+
+        try:
+            self.ser.write(self.encapsulate(message))
+            #self.ser.flush()   # this line ensure data is sent but blocks the program and bypass timeout handling 
+        except serial.SerialTimeoutException:
+            self.get_logger().error("Error sending message: Serial timeout.")
+
+
+        if not self.wait_aux():
+            self.get_logger().error("Try sending message for too long, message may not have been sent.")
+            return  
+
+        self.get_logger().info(f"Message envoyé : {message}")
+
+
+    def listen_radio(self):
+        if self.ser.in_waiting > 0:
+            bytes_msg = self.ser.read(self.ser.in_waiting)
+            self.buffer.append(bytes_msg)
+            self.get_logger().info(f"Received some data. Buffer size: {self.buffer.size} bytes.")
+        else:
+            #self.get_logger().info(f"No message received.")
+            pass
+
+
+    def extract_message(self) -> str:
+        return self.buffer.extract_message()
+
+
+    def encapsulate(self, message) -> bytes:
+        """ 
+        [Marqueur de début (2 octets)]
+        [Type de données (1 octet)]
+        [Longueur (2 octets)]
+        [Données (N octets)]
+        [Marqueur de fin (2 octets)]
+        """
+
+        # Détermination du type de données et conversion en bytes
+        if isinstance(message, int):
+            data_type = self.type_to_id[int()]
+            data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
+        elif isinstance(message, str):
+            data_type = self.type_to_id[str()]
+            data_bytes = message.encode('utf-8')
+        else:
+            raise ValueError(f"Type de données {type(message)} non supporté.")
+        
+        length = len(data_bytes)
+
+        return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
+
 
 
 
 class Buffer():
-    START_MARKER = b'\xAA\xBB'  # Marqueur de début
-    END_MARKER = b'\xCC\xDD'    # Marqueur de fin
-    type_id = {0x01: int(),
-               0x02: str()}
+    def __init__(self, START_MARKER, END_MARKER, type_id, logger=None):
+        self.START_MARKER = START_MARKER
+        self.END_MARKER = END_MARKER
+        self.type_id = type_id
 
-    def __init__(self):
+        self.logger = logger
+        
         self.size = 0
         self.buffer = bytearray()
-    
+
     def append(self, data: bytes):
         self.buffer.extend(data)
         self.size += len(data)
-    
-    def extract_message(self) -> str:
-        # recherche du premier marqueur de début dans le buffer
-        start_index = self.buffer.find(self.START_MARKER)
-        # recherche du premier marqueur de fin après le marqueur de début
-        end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
+    def extract_message(self) -> str:
+        start_index = self.buffer.find(self.START_MARKER)
+        end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
         # si on detecte un message incomplet au début du buffer, on le nettoie
         if start_index != 0:
             if start_index == -1:
-                # aucun marqueur de début trouvé, on vide tout le buffer
                 self.buffer = bytearray()
                 self.size = 0
+                if self.logger:
+                    self.logger.warning("Aucun marqueur de début trouvé, buffer vidé.")
             else:
-                # on supprime les données avant le marqueur de début
                 self.buffer = self.buffer[start_index:]
                 end_index -= start_index
                 start_index = 0
-            raise Warning("Incomplete message at start of buffer. Discarding leading data.")
-            
-
+                if self.logger:
+                    self.logger.warning("Message incomplet au début du buffer. Données précédentes supprimées.")
+            return None
 
         # si on a trouvé un message complet au debut du buffer
         if start_index == 0 and end_index != -1:
-            # on extrait le message du buffer
             full_message = self.buffer[:end_index + 2]
-            self.buffer = self.buffer[end_index + 2:] 
+            self.buffer = self.buffer[end_index + 2:]
 
-            # on décompose le message
             data_type = self.type_id.get(full_message[2], None)
             length = struct.unpack('>H', full_message[3:5])[0]
             data_bytes = full_message[5:5 + length]
 
-            # on vérifie la validitée des données
             if len(data_bytes) <= 2+1+2+2:
-                raise ValueError("Message trop court pour être valide.")
+                if self.logger:
+                    self.logger.error("Message trop court pour être valide.")
+                return None
             if len(data_bytes) != length:
-                raise ValueError("Longueur des données incorrecte. Perte de paquets possible.")
+                if self.logger:
+                    self.logger.error("Longueur des données incorrecte. Perte de paquets possible.")
+                return None
             if data_type is None:
-                raise ValueError("Type de données inconnu.")
+                if self.logger:
+                    self.logger.error("Type de données inconnu.")
+                return None
 
-            # on décode les données selon le type
             if isinstance(data_type, str):
                 message = data_bytes.decode('utf-8')
                 return message
             elif isinstance(data_type, int):
                 message = struct.unpack('>i', data_bytes)[0]
                 return message
-        
-        
         else:
             return None  # No complete message found
-    
 
 
 if __name__ == "__main__":

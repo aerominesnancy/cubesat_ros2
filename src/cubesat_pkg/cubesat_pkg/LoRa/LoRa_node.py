@@ -49,7 +49,7 @@ class lora(Node):
             self.ser = serial.Serial(port='/dev/serial0', baudrate=9600, timeout=self.serial_timeout)
 
             # create loop timer
-            self.create_timer(self.loop_delay_milisecond, self.loop)
+            self.create_timer(self.loop_delay_milisecond/1000, self.loop)
 
             self.get_logger().info('lora node has been started.')
 

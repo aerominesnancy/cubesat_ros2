@@ -1,3 +1,14 @@
+class VanillaLogger:
+    """
+    Logger basique pour les tests hors ROS2
+    """
+    def info(self, msg):
+        print(f"[INFO] {msg}")
+    def warning(self, msg):
+        print(f"[WARNING] {msg}")
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
+
 import struct
 import serial
 import time
@@ -66,7 +77,7 @@ class LoRa():
             return  # cannot send if AUX is not HIGH
 
         try:
-            self.ser.write(self.encapsulate(message))
+            self.ser.write(encapsulate(message))
             #self.ser.flush()   # this line ensure data is sent but blocks the program and bypass timeout handling 
         except serial.SerialTimeoutException:
             self.get_logger().error("Error sending message: Serial timeout.")
@@ -93,28 +104,28 @@ class LoRa():
         return self.buffer.extract_message()
 
 
-    def encapsulate(self, message) -> bytes:
-        """ 
-        [Marqueur de début (2 octets)]
-        [Type de données (1 octet)]
-        [Longueur (2 octets)]
-        [Données (N octets)]
-        [Marqueur de fin (2 octets)]
-        """
+def encapsulate(self, message) -> bytes:
+    """ 
+    [Marqueur de début (2 octets)]
+    [Type de données (1 octet)]
+    [Longueur (2 octets)]
+    [Données (N octets)]
+    [Marqueur de fin (2 octets)]
+    """
 
-        # Détermination du type de données et conversion en bytes
-        if isinstance(message, int):
-            data_type = self.type_to_id[int()]
-            data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
-        elif isinstance(message, str):
-            data_type = self.type_to_id[str()]
-            data_bytes = message.encode('utf-8')
-        else:
-            raise ValueError(f"Type de données {type(message)} non supporté.")
-        
-        length = len(data_bytes)
+    # Détermination du type de données et conversion en bytes
+    if isinstance(message, int):
+        data_type = self.type_to_id[int()]
+        data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
+    elif isinstance(message, str):
+        data_type = self.type_to_id[str()]
+        data_bytes = message.encode('utf-8')
+    else:
+        raise ValueError(f"Type de données {type(message)} non supporté.")
+    
+    length = len(data_bytes)
 
-        return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
+    return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
 
 
 
@@ -185,21 +196,26 @@ class Buffer():
             return None  # No complete message found
 
 
+
+
+
 if __name__ == "__main__":
 
-    print("\n--- Protocole de test LoRa_data_encapsulation.py ---")
-    # Test 1 : Encapsulation correcte d'un message string
+
+    print("\n--- Protocole de test LoRa/Buffer (sans ROS2) ---")
+    logger = VanillaLogger()
+
+    # Test 1 : Encapsulation correcte d'un message string et int
     try:
         msg = "Hello, CubeSat!"
         print(f"\nTest 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = encapsulate(msg)
+        encapsulated = struct.pack('>2sBHI', b'\xAA\xBB', 0x02, len(msg.encode('utf-8')), 0) + msg.encode('utf-8') + b'\xCC\xDD' if False else encapsulate(msg)
         print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
 
-        msg = 1234
-        print(f"Test 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = encapsulate(msg)
-        print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
-        
+        msg2 = 1234
+        print(f"Test 1 - Message de base : {msg2} ({type(msg2)})")
+        encapsulated2 = encapsulate(msg2)
+        print(f"Test 1 - Encapsulation obtenue : {encapsulated2}")
         print("✅ Test 1 OK: Encapsulation réussie.")
     except Exception as e:
         print(f"❌ Test 1 ECHEC: {e}")
@@ -214,91 +230,94 @@ if __name__ == "__main__":
         print(f"✅ Test 2 OK: Exception levée pour type non supporté. Message : {e}")
 
     # Test 3 : Extraction correcte d'un message
-    try:
-        buf = Buffer()
-        msg = "Hello, CubeSat!"
-        encapsulated = encapsulate(msg)
-        buf.append(encapsulated)
-        print("\nTest 3 - Message encapsulé ajouté au buffer: ", msg)
-        print(f"Test 3 - Buffer après append : {buf.buffer}")
-        result = buf.extract_message()
-        print(f"Test 3 - Message extrait : {result}")
-        assert result == msg
+    buf = Buffer(b'\xAA\xBB', b'\xCC\xDD', {0x01: int(), 0x02: str()}, logger)
+    msg = "Hello, CubeSat!"
+    encapsulated = encapsulate(msg)
+    buf.append(encapsulated)
+    print("\nTest 3 - Message encapsulé ajouté au buffer: ", msg)
+    print(f"Test 3 - Buffer après append : {buf.buffer}")
+    result = buf.extract_message()
+    print(f"Test 3 - Message extrait : {result}")
+    if result == msg:
         print("✅ Test 3 OK: Extraction correcte du message.")
-    except Exception as e:
-        print(f"❌ Test 3 ECHEC: {e}")
+    else:
+        print("❌ Test 3 ECHEC: Extraction incorrecte.")
 
     # Test 4 : Message incomplet au début du buffer
-    try:
-        buf = Buffer()
-        encapsulated = encapsulate("test_4_incomplete")
-        buf.append(b'xxxx' + encapsulated)
-        print(f"\nTest 4 - Buffer après append : {buf.buffer}")
-        buf.extract_message()
-        print("❌ Test 4 ECHEC: Warning non levé pour message incomplet.")
-    except Warning as w:
-        print(f"✅ Test 4.1 OK: Warning levé pour message incomplet. Message : {w}")
-    except Exception as e:
-        print(f"❌ Test 4 ECHEC: Mauvaise exception levée: {e}")
-    try:
-        result = buf.extract_message()
-        print(f"Test 4 - Message extrait après nettoyage : {result}")
-        assert result == "test_4_incomplete"
+    buf = Buffer(b'\xAA\xBB', b'\xCC\xDD', {0x01: int(), 0x02: str()}, logger)
+    encapsulated = encapsulate("test_4_incomplete")
+    buf.append(b'xxxx' + encapsulated)
+    print(f"\nTest 4 - Buffer après append : {buf.buffer}")
+    result = buf.extract_message()
+    if result is None:
+        print("✅ Test 4.1 OK: Warning log pour message incomplet.")
+    else:
+        print("❌ Test 4.1 ECHEC: Un message a été extrait alors qu'il est incomplet.")
+    result = buf.extract_message()
+    print(f"Test 4 - Message extrait après nettoyage : {result}")
+    if result == "test_4_incomplete":
         print(f"✅ Test 4.2 OK: Bon nettoyage du buffer.")
-    except Warning as w:
-        print(f"❌ Test 4.2 OK: Le buffer n'a pas été nettoyé. Message : {w}")
+    else:
+        print(f"❌ Test 4.2 ECHEC: Le buffer n'a pas été nettoyé ou extraction incorrecte.")
 
     # Test 5 : Type inconnu dans le message
-    try:
-        bad_type = b'\xAA\xBB\xFF\x00\x05hello\xCC\xDD'  # type 0xFF inconnu
-        print(f"\nTest 5 - Message encapsulé avec type inconnu : {bad_type}")
-        buf = Buffer()
-        buf.append(bad_type)
-        buf.extract_message()
-        print("❌ Test 5 ECHEC: Exception non levée pour type inconnu.")
-    except ValueError as e:
-        print(f"✅ Test 5 OK: Exception levée pour type inconnu. Message : {e}")
+    bad_type = b'\xAA\xBB\xFF\x00\x05hello\xCC\xDD'  # type 0xFF inconnu
+    print(f"\nTest 5 - Message encapsulé avec type inconnu : {bad_type}")
+    buf = Buffer(b'\xAA\xBB', b'\xCC\xDD', {0x01: int(), 0x02: str()}, logger)
+    buf.append(bad_type)
+    result = buf.extract_message()
+    if result is None:
+        print(f"✅ Test 5 OK: Log d'erreur pour type inconnu.")
+    else:
+        print(f"❌ Test 5 ECHEC: Extraction d'un message alors que le type est inconnu.")
 
     # Test 6 : Longueur incorrecte dans le message
-    try:
-        # Longueur annoncée 10, mais seulement 5 octets de données
-        bad_length = b'\xAA\xBB\x02\x00\x0Ahello\xCC\xDD'
-        print(f"\nTest 6 - Message encapsulé avec mauvaise longueur : {bad_length}")
-        buf = Buffer()
-        buf.append(bad_length)
-        buf.extract_message()
-        print("❌ Test 6 ECHEC: Exception non levée pour longueur incorrecte.")
-    except ValueError as e:
-        print(f"✅ Test 6 OK: Exception levée pour longueur incorrecte. Message : {e}")
+    bad_length = b'\xAA\xBB\x02\x00\x0Ahello\xCC\xDD'
+    print(f"\nTest 6 - Message encapsulé avec mauvaise longueur : {bad_length}")
+    buf = Buffer(b'\xAA\xBB', b'\xCC\xDD', {0x01: int(), 0x02: str()}, logger)
+    buf.append(bad_length)
+    result = buf.extract_message()
+    if result is None:
+        print(f"✅ Test 6 OK: Log d'erreur pour longueur incorrecte.")
+    else:
+        print(f"❌ Test 6 ECHEC: Extraction d'un message alors que la longueur est incorrecte.")
 
     # Test 7 : Extraction d'un message en deux temps (incomplet puis complet)
-    try:
-        msg = "Test 7 - message fragmenté"
-        encapsulated = encapsulate(msg)
-        # On découpe le message en deux parties
-        part1 = encapsulated[:len(encapsulated)//2]
-        part2 = encapsulated[len(encapsulated)//2:]
-        buf = Buffer()
-        print(f"\nTest 7 - Message de base : {msg}")
-        print(f"Test 7 - Encapsulation complète : {encapsulated}")
-        print(f"Test 7 - Partie 1 envoyée : {part1}")
-        buf.append(part1)
-        result = buf.extract_message()
-        print(f"Test 7 - Résultat après partie 1 : {result}")
-        if result is None:
-            print("✅ Test 7.1 OK: Aucun message extrait, message incomplet.")
-        else:
-            print("❌ Test 7.1 ECHEC: Un message a été extrait alors qu'il est incomplet.")
-        print(f"Test 7 - Partie 2 envoyée : {part2}")
-        buf.append(part2)
-        result = buf.extract_message()
-        print(f"Test 7 - Résultat après partie 2 : {result}")
-        if result == msg:
-            print("✅ Test 7.2 OK: Message extrait correctement après réception complète.")
-        else:
-            print("❌ Test 7.2 ECHEC: Le message extrait n'est pas correct.")
-    except Exception as e:
-        print(f"❌ Test 7 ECHEC: {e}")
+    msg = "Test 7 - message fragmenté"
+    encapsulated = encapsulate(msg)
+    part1 = encapsulated[:len(encapsulated)//2]
+    part2 = encapsulated[len(encapsulated)//2:]
+    buf = Buffer(b'\xAA\xBB', b'\xCC\xDD', {0x01: int(), 0x02: str()}, logger)
+    print(f"\nTest 7 - Message de base : {msg}")
+    print(f"Test 7 - Encapsulation complète : {encapsulated}")
+    print(f"Test 7 - Partie 1 envoyée : {part1}")
+    buf.append(part1)
+    result = buf.extract_message()
+    print(f"Test 7 - Résultat après partie 1 : {result}")
+    if result is None:
+        print("✅ Test 7.1 OK: Aucun message extrait, message incomplet.")
+    else:
+        print("❌ Test 7.1 ECHEC: Un message a été extrait alors qu'il est incomplet.")
+    print(f"Test 7 - Partie 2 envoyée : {part2}")
+    buf.append(part2)
+    result = buf.extract_message()
+    print(f"Test 7 - Résultat après partie 2 : {result}")
+    if result == msg:
+        print("✅ Test 7.2 OK: Message extrait correctement après réception complète.")
+    else:
+        print("❌ Test 7.2 ECHEC: Le message extrait n'est pas correct.")
+
+    print("--- Fin du protocole de test ---\n")
+    print("❌ Test 7.1 ECHEC: Un message a été extrait alors qu'il est incomplet.")
+    print(f"Test 7 - Partie 2 envoyée : {part2}")
+    buf.append(part2)
+    result = buf.extract_message()
+    print(f"Test 7 - Résultat après partie 2 : {result}")
+    if result == msg:
+        print("✅ Test 7.2 OK: Message extrait correctement après réception complète.")
+    else:
+        print("❌ Test 7.2 ECHEC: Le message extrait n'est pas correct.")
+
 
     # test 8 : Message trop court pour être valide
     try:

@@ -104,7 +104,7 @@ class LoRa():
         return self.buffer.extract_message()
 
 
-def encapsulate(self, message) -> bytes:
+def encapsulate(message) -> bytes:
     """ 
     [Marqueur de début (2 octets)]
     [Type de données (1 octet)]

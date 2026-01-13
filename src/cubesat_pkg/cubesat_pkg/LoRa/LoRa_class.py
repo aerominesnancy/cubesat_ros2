@@ -104,28 +104,28 @@ class LoRa():
         return self.buffer.extract_message()
 
 
-def encapsulate(message) -> bytes:
-    """ 
-    [Marqueur de début (2 octets)]
-    [Type de données (1 octet)]
-    [Longueur (2 octets)]
-    [Données (N octets)]
-    [Marqueur de fin (2 octets)]
-    """
+    def encapsulate(self, message) -> bytes:
+        """ 
+        [Marqueur de début (2 octets)]
+        [Type de données (1 octet)]
+        [Longueur (2 octets)]
+        [Données (N octets)]
+        [Marqueur de fin (2 octets)]
+        """
 
-    # Détermination du type de données et conversion en bytes
-    if isinstance(message, int):
-        data_type = self.type_to_id[int()]
-        data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
-    elif isinstance(message, str):
-        data_type = self.type_to_id[str()]
-        data_bytes = message.encode('utf-8')
-    else:
-        raise ValueError(f"Type de données {type(message)} non supporté.")
-    
-    length = len(data_bytes)
+        # Détermination du type de données et conversion en bytes
+        if isinstance(message, int):
+            data_type = self.type_to_id[int()]
+            data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
+        elif isinstance(message, str):
+            data_type = self.type_to_id[str()]
+            data_bytes = message.encode('utf-8')
+        else:
+            raise ValueError(f"Type de données {type(message)} non supporté.")
+        
+        length = len(data_bytes)
 
-    return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
+        return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
 
 
 
@@ -204,6 +204,7 @@ if __name__ == "__main__":
 
     print("\n--- Protocole de test LoRa/Buffer (sans ROS2) ---")
     logger = VanillaLogger()
+    lora = LoRa(0,0,0,0,0, logger=logger)
 
     # Test 1 : Encapsulation correcte d'un message string et int
     try:

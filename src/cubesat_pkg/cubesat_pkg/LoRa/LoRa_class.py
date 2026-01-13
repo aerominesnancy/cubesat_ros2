@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
     print("\n--- Protocole de test LoRa/Buffer (sans ROS2) ---")
     logger = VanillaLogger()
-    lora = LoRa(0,0,0,0,0, logger=logger)
+    lora = LoRa(17, 27, 22, 0, 0, logger=logger)
 
     # Test 1 : Encapsulation correcte d'un message string et int
     try:

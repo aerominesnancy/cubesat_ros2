@@ -21,12 +21,18 @@ class lora(Node):
         self.AUX_timeout = 5  # seconds
         self.serial_timeout = 5  # seconds
 
+        if self.loop_delay_milisecond == -1:
+            self.get_logger().error("Parameter 'loop_delay_milisecond' must be set to a positive float."
+                                    + f" Current value : {self.loop_delay_milisecond}")
+            self.is_valid = False
+
         if self.M0 == -1 or self.M1 == -1 or self.AUX == -1:
             self.get_logger().error("LoRa GPIO pins must be set to valid pin numbers."
                                     + f" Current values : M0={self.M0}, M1={self.M1}, AUX={self.AUX}")
-            self.get_logger().warn("LoRa node is shutting down...")
             self.is_valid = False
 
+        if not self.is_valid:
+            self.get_logger().warn("LoRa node is shutting down...")
         else:
             # setup GPIO
             GPIO.setmode(GPIO.BCM)

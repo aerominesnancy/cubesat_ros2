@@ -43,7 +43,7 @@ def generate_launch_description():
   lora_node = Node(
     package="cubesat_pkg",
     executable="lora_node",
-    parameters=[{'M0_pin': 17, 'M1_pin': 27, 'AUX_pin': 22}]
+    parameters=[{'loop_delay_milisecond':10,'M0_pin': 17, 'M1_pin': 27, 'AUX_pin': 22}]
   )
 
   # Add the nodes and the process to the LaunchDescription list

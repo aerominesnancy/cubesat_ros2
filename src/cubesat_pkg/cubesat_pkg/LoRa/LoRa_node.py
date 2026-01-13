@@ -14,6 +14,7 @@ class lora(Node):
         self.is_valid = True
 
         # Récupération des paramètres
+        self.loop_delay_milisecond = self.declare_parameter('loop_delay_milisecond', 10).value
         self.M0 = self.declare_parameter('M0_pin', -1).value
         self.M1 = self.declare_parameter('M1_pin', -1).value
         self.AUX = self.declare_parameter('AUX_pin', -1).value
@@ -40,7 +41,10 @@ class lora(Node):
 
             # setup serial connection
             self.ser = serial.Serial(port='/dev/serial0', baudrate=9600, timeout=self.serial_timeout)
-        
+
+            # create loop timer
+            self.create_timer(self.loop_delay_milisecond, self.loop)
+
             self.get_logger().info('lora node has been started.')
 
 
@@ -69,16 +73,36 @@ class lora(Node):
 
         try:
             self.ser.write(message.encode('utf-8'))
+            #self.ser.flush()   # ensure data is sent but blocks the program and bypass timeout handling
         except serial.SerialTimeoutException:
             self.get_logger().error("Error sending message: Serial timeout.")
 
-        self.ser.flush()
 
         if not self.wait_aux():
             self.get_logger().error("Try sending message for too long, message may not have been sent.")
             return  
         
         print(time.time(), "Message envoyé :", message ,"\n\n\n")
+
+    
+    def receive_message(self):
+    
+        if self.ser.in_waiting > 0:
+            message = self.ser.read(self.ser.in_waiting).decode('utf-8')
+            self.get_logger().info(f"Received message: {message}")
+            return message
+        else:
+            self.get_logger().info(f"No message received.")
+            return None  # no message received
+        
+
+    def loop(self):
+        # recover any incoming messages
+        received = self.receive_message()
+        if received:
+            self.send_string(f"Echo: {received}")
+
+
 
     
     def destroy_node(self):

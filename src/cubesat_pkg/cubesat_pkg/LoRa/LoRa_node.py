@@ -99,7 +99,7 @@ class lora(Node):
             self.get_logger().info(f"Received message: {message}")
             return message
         else:
-            self.get_logger().info(f"No message received.")
+            #self.get_logger().info(f"No message received.")
             return None  # no message received
         
 

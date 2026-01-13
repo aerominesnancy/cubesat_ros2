@@ -87,13 +87,14 @@ class lora(Node):
         if not self.wait_aux():
             self.get_logger().error("Try sending message for too long, message may not have been sent.")
             return  
-        
-        print(time.time(), "Message envoyé :", message ,"\n\n\n")
+
+        self.get_logger().info(f"Message envoyé : {message}")
 
     
     def receive_message(self):
     
         if self.ser.in_waiting > 0:
+            self.wait_aux()
             message = self.ser.read(self.ser.in_waiting).decode('utf-8')
             self.get_logger().info(f"Received message: {message}")
             return message

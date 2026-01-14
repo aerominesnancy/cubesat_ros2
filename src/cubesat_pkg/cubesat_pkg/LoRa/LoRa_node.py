@@ -7,7 +7,7 @@ import time
 
 import sys
 sys.path.append("home/cubesat/ros_ws/src/cubesat_pkg/cubesat_pkg/LoRa/")
-from LoRa_class.py import LoRa
+from LoRa_class import LoRa
 
 
 

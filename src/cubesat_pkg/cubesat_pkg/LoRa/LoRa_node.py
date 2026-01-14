@@ -49,15 +49,29 @@ class lora(Node):
 
     def loop(self):
         # recover any incoming messages
-
         self.lora.listen_radio()
         
         # read buffer for complete messages
-        message = self.lora.extract_message()
-        
-        if message is not None:
+        msg_type, message = self.lora.extract_message()
+
+        # Acknowledge received messages
+        if msg_type is not None and message is not None:
             self.get_logger().info(f"Complete message received: {message}")
-            self.lora.send_radio(f"ACK: {message}")
+            self.lora.send_radio(f"ACK: Received your {msg_type} message.", "string")
+        else:
+            return  # no complete message to process
+        
+        # Process specific message types
+        if msg_type == "timestamp_update":
+            # Update system time
+            try:
+                import os
+                os.system(f'sudo date -s @{message}')
+                self.get_logger().info(f"System time updated to {time.ctime(message)}")
+            except Exception as e:
+                self.get_logger().error(f"Failed to update system time: {e}")
+        
+
 
     
     def destroy_node(self):

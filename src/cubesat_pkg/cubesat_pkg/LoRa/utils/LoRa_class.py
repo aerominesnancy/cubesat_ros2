@@ -36,8 +36,9 @@ class Just_Print_Logger():
 class LoRa():
     START_MARKER = b'\xAA\xBB'  # Marqueur de début
     END_MARKER = b'\xCC\xDD'    # Marqueur de fin
-    id_to_type = {0x01: int(),
-                  0x02: str()}
+    id_to_type = {0x01: "int",
+                  0x02: "string",
+                  0x03: "timestamp_update"}
     type_to_id = {v: k for k, v in id_to_type.items()}
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
@@ -90,15 +91,20 @@ class LoRa():
         return True
     
 
-    def send_radio(self, message: str):
+    def send_radio(self, message, type):
         
         if not self.wait_aux():
             self.logger.error("Cannot send message because LoRa module is not ready.")
             return  # cannot send if AUX is not HIGH
 
         try:
-            self.ser.write(self.encapsulate(message))
-            #self.ser.flush()   # this line ensure data is sent but blocks the program and bypass timeout handling 
+            encapsulated = self.encapsulate(message, type)
+            if encapsulated is None:
+                self.logger.error("Message encapsulation failed. Message not sent.")
+                return
+            
+            self.ser.write(encapsulated)
+
         except serial.SerialTimeoutException:
             self.logger.error("Error sending message: Serial timeout.")
 
@@ -120,11 +126,12 @@ class LoRa():
             pass
 
 
-    def extract_message(self) -> str:
+    def extract_message(self) -> tuple:
         return self.buffer.extract_message()
 
-    def encapsulate(self, message) -> bytes:
-        return encapsulate(message, self.type_to_id, self.START_MARKER, self.END_MARKER, self.logger)
+
+    def encapsulate(self, message, msg_type) -> bytes:
+        return encapsulate(message, msg_type, self.type_to_id, self.START_MARKER, self.END_MARKER, self.logger)
     
 
     def close(self):
@@ -135,7 +142,7 @@ class LoRa():
 
 
 
-def encapsulate(message, type_to_id, START_MARKER, END_MARKER, logger=Raise_Errors_Logger()) -> bytes:
+def encapsulate(message, msg_type:str,type_to_id, START_MARKER, END_MARKER, logger=Raise_Errors_Logger()) -> bytes:
     """ 
     [Marqueur de début (2 octets)]
     [Type de données (1 octet)]
@@ -144,16 +151,35 @@ def encapsulate(message, type_to_id, START_MARKER, END_MARKER, logger=Raise_Erro
     [Marqueur de fin (2 octets)]
     """
 
+    if msg_type not in type_to_id:
+        logger.error(f"Type de données {msg_type} non supporté pour l'encapsulation.")
+        return None
+
     # Détermination du type de données et conversion en bytes
-    if isinstance(message, int):
-        data_type = type_to_id[int()]
-        data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
-    elif isinstance(message, str):
-        data_type = type_to_id[str()]
-        data_bytes = message.encode('utf-8')
-    else:
-        logger.error(f"Type de données {type(message)} non supporté.")
-    
+    if msg_type == "int":
+        if isinstance(message, int):
+            data_type = type_to_id["int"]
+            data_bytes = struct.pack('>i', message) 
+        else:
+            logger.error(f"Le message doit être de type int pour l'encapsulation de type 'int'.")
+            return None
+        
+    elif msg_type == "string":
+        if isinstance(message, str):
+            data_type = type_to_id["string"]
+            data_bytes = message.encode('utf-8')
+        else:
+            logger.error(f"Le message doit être de type str pour l'encapsulation de type 'string'.")
+            return None
+        
+    elif msg_type == "timestamp_update":
+        if isinstance(message, (int, float)):
+            data_type = type_to_id["timestamp_update"]
+            data_bytes = struct.pack('>I', int(message)) 
+        else:
+            logger.error(f"Le message doit être de type int ou float pour l'encapsulation de type 'timestamp_update'.")
+            return None
+
     length = len(data_bytes)
 
     return START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
@@ -187,7 +213,7 @@ class Buffer():
         if start_index == -1 and self.size > 0:
             self.clear()
             self.logger.warn("Reliquats détecté dans le buffer, buffer vidé.")
-            return None
+            return None,None
         
         # si on detecte des données avant le premier message, on les supprime
         elif start_index > 0 and end_index > start_index:
@@ -216,27 +242,27 @@ class Buffer():
             if len(full_message) <= 2+1+2+2:
                 self.clear()
                 self.logger.error("Message trop court pour être valide. Buffer vidé.")
-                return None
+                return None,None
             if len(data_bytes) != length:
                 self.clear()
                 self.logger.error("Longueur des données incorrecte. Perte de paquets possible. Buffer vidé.")
-                return None
+                return None,None
             if data_type is None:
                 self.clear()
                 self.logger.error("Type de données inconnu. Buffer vidé.")
-                return None
+                return None,None
 
-            return self.decode_message(data_type, data_bytes)
+            return data_type, self.decode_message(data_type, data_bytes)
         
         else:
-            return None  # No complete message found
+            return None,None  # No complete message found
 
     def decode_message(self, data_type, data_bytes):
         try:
-            if data_type == int():
+            if data_type == "int":
                 return struct.unpack('>i', data_bytes)[0]
             
-            elif data_type == str():
+            elif data_type == "string":
                 return data_bytes.decode('utf-8')
             
         except Exception as e:

@@ -1,28 +1,34 @@
 from LoRa_class import LoRa, encapsulate, Buffer
-
+import time
 
 if __name__ == "__main__":
 
     buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER, LoRa.id_to_type)
 
-    test_encapsulate = lambda msg: encapsulate(msg, LoRa.type_to_id, LoRa.START_MARKER, LoRa.END_MARKER)
+    test_encapsulate = lambda msg, type: encapsulate(msg, type, LoRa.type_to_id, LoRa.START_MARKER, LoRa.END_MARKER)
 
 
     print("\n==================== Protocole de test LoRa_data_encapsulation.py ====================")
+
 
     print("\n\nTest 1 : Vérifie l'encapsulation correcte d'un message string et int.")
     # Test 1 : Encapsulation correcte d'un message string
     try:
         msg = "Hello, CubeSat!"
-        print(f"\nTest 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = test_encapsulate(msg)
+        print(f"\nTest 1 - Message de base : {msg} ('string')")
+        encapsulated = test_encapsulate(msg, "string")
         print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
 
         msg = 1234
-        print(f"Test 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = test_encapsulate(msg)
+        print(f"Test 1 - Message de base : {msg} ('int')")
+        encapsulated = test_encapsulate(msg, "int")
         print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
         
+        msg = time.time()
+        print(f"Test 1 - Message de base : {msg} ('timestamp_update')")
+        encapsulated = test_encapsulate(msg, "timestamp_update")
+        print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
+
         print("✅ Test 1 OK: Encapsulation réussie.")
     except Exception as e:
         print(f"❌ Test 1 ECHEC: {e}")
@@ -33,7 +39,7 @@ if __name__ == "__main__":
     try:
         msg = 12.34
         print(f"\nTest 2 - Valeur de base : {msg} ({type(msg)})")
-        test_encapsulate(msg)
+        test_encapsulate(msg, "string")
         print("❌ Test 2 ECHEC: Exception non levée pour type non supporté.")
     except Exception as e:
         print(f"✅ Test 2 OK: Exception levée pour type non supporté. \nMessage : {e}")
@@ -44,16 +50,16 @@ if __name__ == "__main__":
     try:
         buf.clear()
         msg = "Hello, CubeSat!"
-        encapsulated = test_encapsulate(msg)
+        encapsulated = test_encapsulate(msg, "string")
         buf.append(encapsulated)
         print("\nTest 3 - Message encapsulé ajouté au buffer: ", msg)
         print(f"Test 3 - Buffer après append : {buf.buffer}")
         result = buf.extract_message()
         print(f"Test 3 - Message extrait : {result}")
-        assert result == msg
+        assert result != None and result[1] == msg
         print("✅ Test 3.1 OK: Extraction correcte du message.")
-    except Exception as e:
-        print(f"❌ Test 3 ECHEC: {e}")
+    except AssertionError as e:
+        print(f"❌ Test 3.1 ECHEC: Le message extrait ne correspond pas au message de base. {result}")
     
     try:
         print(f"Etat du buffer : {buf.buffer}")
@@ -67,7 +73,7 @@ if __name__ == "__main__":
     # Test 4 : Message incomplet au début du buffer
     try:
         buf.clear()
-        encapsulated = test_encapsulate("test_4_incomplete")
+        encapsulated = test_encapsulate("test_4_incomplete", "string")
         buf.append(b'xxxx' + encapsulated)
         print(f"\nTest 4 - Buffer après append : {buf.buffer}")
         buf.extract_message()
@@ -77,7 +83,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Test 4 ECHEC: Mauvaise exception levée: {e}")
     try:
-        result = buf.extract_message()
+        result = buf.extract_message()[1]
         print(f"Test 4 - Message extrait après nettoyage : {result}")
         assert result == "test_4_incomplete"
         print(f"✅ Test 4.2 OK: Bon nettoyage du buffer.")
@@ -98,7 +104,7 @@ if __name__ == "__main__":
         print(f"✅ Test 5.1 OK: Exception levée pour type inconnu. \nMessage : {e}")
     
     try:
-        result = buf.extract_message()
+        result = buf.extract_message()[1]
         print(f"Test 5 - Message extrait après nettoyage : {result}")
         assert result is None
         print(f"✅ Test 5.2 OK: Bon nettoyage du buffer.")
@@ -120,7 +126,7 @@ if __name__ == "__main__":
         print(f"✅ Test 6.1 OK: Exception levée pour longueur incorrecte. \nMessage : {e}")
     
     try:
-        result = buf.extract_message()
+        result = buf.extract_message()[1]
         print(f"Test 6 - Message extrait après nettoyage : {result}")
         assert result is None
         print(f"✅ Test 6.2 OK: Bon nettoyage du buffer.")
@@ -132,7 +138,7 @@ if __name__ == "__main__":
     # Test 7 : Extraction d'un message en deux temps (incomplet puis complet)
     try:
         msg = "Test 7 - message fragmenté"
-        encapsulated = test_encapsulate(msg)
+        encapsulated = test_encapsulate(msg, "string")
         # On découpe le message en deux parties
         part1 = encapsulated[:len(encapsulated)//2]
         part2 = encapsulated[len(encapsulated)//2:]
@@ -143,7 +149,7 @@ if __name__ == "__main__":
         buf.append(part1)
         result = buf.extract_message()
         print(f"Test 7 - Résultat après partie 1 : {result}")
-        if result is None:
+        if result[1] is None:
             print("✅ Test 7.1 OK: Aucun message extrait, message incomplet.")
         else:
             print("❌ Test 7.1 ECHEC: Un message a été extrait alors qu'il est incomplet.")
@@ -151,7 +157,7 @@ if __name__ == "__main__":
         buf.append(part2)
         result = buf.extract_message()
         print(f"Test 7 - Résultat après partie 2 : {result}")
-        if result == msg:
+        if result[1] == msg:
             print("✅ Test 7.2 OK: Message extrait correctement après réception complète.")
         else:
             print("❌ Test 7.2 ECHEC: Le message extrait n'est pas correct.")
@@ -174,7 +180,7 @@ if __name__ == "__main__":
     try:
         result = buf.extract_message()
         print(f"Test 8 - Message extrait après nettoyage : {result}")
-        assert result is None
+        assert result[1] is None
         print(f"✅ Test 8.2 OK: Bon nettoyage du buffer.")
     except Warning as w:
         print(f"❌ Test 8.2 OK: Le buffer n'a pas été nettoyé. \nMessage : {w}")
@@ -198,7 +204,7 @@ if __name__ == "__main__":
     try:
         result = buf.extract_message()
         print(f"Test 9 - Message extrait après nettoyage : {result}")
-        assert result is None
+        assert result[1] is None
         print(f"✅ Test 9.2 OK: Bon nettoyage du buffer.")
     except Warning as w:
         print(f"❌ Test 9.2 OK: Le buffer n'a pas été nettoyé. \nMessage : {w}")

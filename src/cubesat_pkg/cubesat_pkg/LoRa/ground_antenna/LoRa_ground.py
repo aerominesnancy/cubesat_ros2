@@ -21,7 +21,8 @@ def receive_loop():
         lora.listen_radio()
         message = lora.extract_message()
         if message is not None:
-            print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}")
+            print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}", flush=True)
+
         time.sleep(0.1)
 
 receiver_thread = threading.Thread(target=receive_loop, daemon=True)
@@ -39,6 +40,4 @@ except KeyboardInterrupt:
     print("\n🛑 Arrêt demandé par l'utilisateur.")
 
 
-lora.close()
-print("🔒 Test post deconnexion")
 lora.close()

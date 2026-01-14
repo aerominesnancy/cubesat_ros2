@@ -49,6 +49,7 @@ class lora(Node):
 
     def loop(self):
         # recover any incoming messages
+        
         self.lora.listen_radio()
         
         # read buffer for complete messages

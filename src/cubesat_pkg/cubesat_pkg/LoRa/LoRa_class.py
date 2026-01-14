@@ -99,7 +99,7 @@ class LoRa():
             self.buffer.append(bytes_msg)
             self.logger.info(f"Received some data. Buffer size: {self.buffer.size} bytes.")
         else:
-            #self.logger.info(f"No message received.")
+            self.logger.info(f"No data received.")
             pass
 
 

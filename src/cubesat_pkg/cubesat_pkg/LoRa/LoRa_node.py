@@ -6,7 +6,7 @@ import RPi.GPIO as GPIO
 import time
 
 import sys
-sys.path.append("~/ros_ws/src/cubesat_pkg/cubesat_pkg/LoRa/")
+sys.path.append("home/cubesat/ros_ws/src/cubesat_pkg/cubesat_pkg/LoRa/")
 from LoRa_class.py import LoRa
 
 

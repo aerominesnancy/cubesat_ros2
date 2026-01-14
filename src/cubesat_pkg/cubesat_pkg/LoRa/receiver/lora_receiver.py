@@ -1,7 +1,15 @@
+# ===================================================================
+# 
+# Ce programme est dédié à l'antenne au sol du CubeSat. 
+# Il permet d'envoyer et de recevoir des messages via le module LoRa.
+# Il utilise la classe LoRa définie dans LoRa_class.py pour gérer la communication.
+#                                                                                  
+# ===================================================================
+
 import time
 import threading
 import RPi.GPIO as GPIO
-from LoRa_data_encapsulation import LoRa, Buffer
+from LoRa_class import LoRa
 
 lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=4, AUX_timeout=5, serial_timeout=5)
 
@@ -13,6 +21,7 @@ def receive_loop():
         message = lora.extract_message()
         if message is not None:
             print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}")
+        time.sleep(0.1)
 
 receiver_thread = threading.Thread(target=receive_loop, daemon=True)
 receiver_thread.start()
@@ -29,4 +38,6 @@ except KeyboardInterrupt:
     print("\n🛑 Arrêt demandé par l'utilisateur.")
 
 
+lora.close()
+print("🔒 Test post deconnexion")
 lora.close()

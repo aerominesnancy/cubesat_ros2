@@ -2,10 +2,9 @@
 import rclpy
 from rclpy.node import Node
 
-import serial
 import RPi.GPIO as GPIO
 import time
-from ros2_ws.src.cubesat_pkg.cubesat_pkg.LoRa.LoRa_class import LoRa, encapsulate, Buffer
+from LoRa_class import LoRa
 
 
 
@@ -24,7 +23,7 @@ class lora(Node):
         self.serial_timeout = 5  # seconds
 
         if self.loop_delay_milisecond == -1:
-            self.get_logger().fatal("Parameter 'loop_delay_milisecond' must be set to a positive float."
+            self.get_logger().fatal("Parameter 'loop_delay_milisecond' must be set to a positive int."
                                     + f" Current value : {self.loop_delay_milisecond}")
             self.is_valid = False
 

@@ -26,7 +26,7 @@ class LoRa():
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
                  AUX_timeout=5.0, serial_timeout=5.0,
-                 logger=None):
+                 logger=VanillaLogger()):
         self.logger = logger
 
         self.M0 = M0_pin
@@ -161,17 +161,19 @@ class Buffer():
         start_index = self.buffer.find(self.START_MARKER)
         end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
-        # si on detecte un message incomplet au début du buffer, on le nettoie
-        if start_index != 0:
-            if start_index == -1:
-                self.clear()
-                self.logger.warn("Aucun marqueur de début trouvé, buffer vidé.")
-            else:
-                self.buffer = self.buffer[start_index:]
-                end_index -= start_index
-                start_index = 0
-                self.logger.warn("Message incomplet au début du buffer. Données précédentes supprimées.")
+        # si on detecte des reliquats dans le buffer, on le vide
+        if start_index == -1 and self.size > 0:
+            self.clear()
+            self.logger.warn("Reliquats détecté dans le buffer, buffer vidé.")
             return None
+        
+        # si on detecte des données avant le premier message, on les supprime
+        elif start_index > 0 and end_index > start_index:
+            self.buffer = self.buffer[start_index:]
+            end_index -= start_index
+            start_index = 0
+            self.logger.warn("Message incomplet au début du buffer. Données précédentes supprimées.")
+            # on ne retourne rien pour 
 
         # si on a trouvé un message complet au debut du buffer
         if start_index == 0 and end_index != -1:
@@ -184,13 +186,16 @@ class Buffer():
 
             # validations
             if len(full_message) <= 2+1+2+2:
-                self.logger.error("Message trop court pour être valide.")
+                self.clear()
+                self.logger.error("Message trop court pour être valide. Buffer vidé.")
                 return None
             if len(data_bytes) != length:
-                self.logger.error("Longueur des données incorrecte. Perte de paquets possible.")
+                self.clear()
+                self.logger.error("Longueur des données incorrecte. Perte de paquets possible. Buffer vidé.")
                 return None
             if data_type is None:
-                self.logger.error("Type de données inconnu.")
+                self.clear()
+                self.logger.error("Type de données inconnu. Buffer vidé.")
                 return None
 
             return self.decode_message(data_type, data_bytes)
@@ -363,5 +368,22 @@ if __name__ == "__main__":
         print(f"✅ Test 8 OK: Exception levée pour message trop court. \nMessage : {e}")
 
 
+    print("\n\nTest 9 : Vérifie la gestion d'un reliquat dans le buffer (pas de début mais taille non nulle).")
+    # Test 9 : Reliquat dans le buffer (pas de START_MARKER mais taille > 0)
+    try:
+        buf.clear()
+        reliquat = b'zzzzzzzz'  # Données sans marqueur de début
+        print(f"\nTest 9 - Reliquat ajouté au buffer: {reliquat}")
+        buf.append(reliquat)
+        result = buf.extract_message()
+        print(f"Test 9 - Résultat de l'extraction : {result}")
+        print("❌ Test 9 ECHEC: Warning non levé pour reliquat dans le buffer.")
+    except Warning as w:
+        print(f"✅ Test 9 OK: Warning levé pour reliquat dans le buffer. \nMessage : {w}")
+    except Exception as e:
+        print(f"❌ Test 9 ECHEC: Mauvaise exception levée: {e}")
 
     print("\n==================== Fin du protocole de test ====================\n\n")
+
+
+    

@@ -80,7 +80,7 @@ def main(args=None):
             rclpy.spin(motor_node)
 
     except KeyboardInterrupt:
-        motor_node.get_logger().info('Motor node interrupted and is shutting down...')
+        motor_node.get_logger().warn('Motor node interrupted and is shutting down...')
 
     finally:
         motor_node.destroy_node()

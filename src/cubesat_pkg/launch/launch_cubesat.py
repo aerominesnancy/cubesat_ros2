@@ -47,5 +47,5 @@ def generate_launch_description():
   )
 
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node, temp_hum_node_1, camera_node, lora_node]
+  ld = [imu_node, motor_node,temp_hum_node_1, camera_node, lora_node]
   return LaunchDescription(ld)

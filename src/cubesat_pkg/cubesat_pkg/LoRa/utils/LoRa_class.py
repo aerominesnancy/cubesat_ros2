@@ -4,8 +4,8 @@ import time
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    print("\n[ERROR] RPi.GPIO module not found.","\nThe only functionalities available will be :",
-          "\n - data encapsulation : LoRa.encapsulate() ", "\n - buffer management : Buffer()")
+    print("\n[ERROR] RPi.GPIO module not found.","\nLoRa class is not available. The only functionalities available will be :",
+          "\n - data encapsulation : encapsulate() ", "\n - buffer management : Buffer()")
 
 
 class Raise_Errors_Logger():
@@ -39,7 +39,6 @@ class LoRa():
     id_to_type = {0x01: int(),
                   0x02: str()}
     type_to_id = {v: k for k, v in id_to_type.items()}
-    logger = Raise_Errors_Logger()
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
                  AUX_timeout=5.0, serial_timeout=5.0,
@@ -124,35 +123,40 @@ class LoRa():
     def extract_message(self) -> str:
         return self.buffer.extract_message()
 
-
     def encapsulate(self, message) -> bytes:
-        """ 
-        [Marqueur de début (2 octets)]
-        [Type de données (1 octet)]
-        [Longueur (2 octets)]
-        [Données (N octets)]
-        [Marqueur de fin (2 octets)]
-        """
-
-        # Détermination du type de données et conversion en bytes
-        if isinstance(message, int):
-            data_type = self.type_to_id[int()]
-            data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
-        elif isinstance(message, str):
-            data_type = self.type_to_id[str()]
-            data_bytes = message.encode('utf-8')
-        else:
-            self.logger.error(f"Type de données {type(message)} non supporté.")
-        
-        length = len(data_bytes)
-
-        return self.START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + self.END_MARKER
+        return encapsulate(message, self.type_to_id, self.START_MARKER, self.END_MARKER, self.logger)
+    
 
     def close(self):
         self.ser.close()
         GPIO.cleanup([self.M0, self.M1, self.AUX])
         self.logger.warn("LoRa serial port closed and GPIO cleaned up.")
         del self
+
+
+
+def encapsulate(message, type_to_id, START_MARKER, END_MARKER, logger=Raise_Errors_Logger()) -> bytes:
+    """ 
+    [Marqueur de début (2 octets)]
+    [Type de données (1 octet)]
+    [Longueur (2 octets)]
+    [Données (N octets)]
+    [Marqueur de fin (2 octets)]
+    """
+
+    # Détermination du type de données et conversion en bytes
+    if isinstance(message, int):
+        data_type = type_to_id[int()]
+        data_bytes = struct.pack('>i', message)  # entier 4 octets big-endian
+    elif isinstance(message, str):
+        data_type = type_to_id[str()]
+        data_bytes = message.encode('utf-8')
+    else:
+        logger.error(f"Type de données {type(message)} non supporté.")
+    
+    length = len(data_bytes)
+
+    return START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
 
 
 

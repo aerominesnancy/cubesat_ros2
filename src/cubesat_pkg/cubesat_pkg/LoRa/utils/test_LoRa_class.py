@@ -1,13 +1,11 @@
-from LoRa_class import LoRa, Buffer, Raise_Errors_Logger
+from LoRa_class import LoRa, encapsulate, Buffer
 
 
 if __name__ == "__main__":
 
-    buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER,
-                LoRa.id_to_type,
-                Raise_Errors_Logger())
+    buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER, LoRa.id_to_type)
 
-    encapsulate = lambda msg: LoRa.encapsulate(LoRa, msg)
+    test_encapsulate = lambda msg: encapsulate(msg, LoRa.type_to_id, LoRa.START_MARKER, LoRa.END_MARKER)
 
 
     print("\n==================== Protocole de test LoRa_data_encapsulation.py ====================")
@@ -17,12 +15,12 @@ if __name__ == "__main__":
     try:
         msg = "Hello, CubeSat!"
         print(f"\nTest 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = encapsulate(msg)
+        encapsulated = test_encapsulate(msg)
         print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
 
         msg = 1234
         print(f"Test 1 - Message de base : {msg} ({type(msg)})")
-        encapsulated = encapsulate(msg)
+        encapsulated = test_encapsulate(msg)
         print(f"Test 1 - Encapsulation obtenue : {encapsulated}")
         
         print("✅ Test 1 OK: Encapsulation réussie.")
@@ -35,7 +33,7 @@ if __name__ == "__main__":
     try:
         msg = 12.34
         print(f"\nTest 2 - Valeur de base : {msg} ({type(msg)})")
-        encapsulate(msg)
+        test_encapsulate(msg)
         print("❌ Test 2 ECHEC: Exception non levée pour type non supporté.")
     except Exception as e:
         print(f"✅ Test 2 OK: Exception levée pour type non supporté. \nMessage : {e}")
@@ -46,7 +44,7 @@ if __name__ == "__main__":
     try:
         buf.clear()
         msg = "Hello, CubeSat!"
-        encapsulated = encapsulate(msg)
+        encapsulated = test_encapsulate(msg)
         buf.append(encapsulated)
         print("\nTest 3 - Message encapsulé ajouté au buffer: ", msg)
         print(f"Test 3 - Buffer après append : {buf.buffer}")
@@ -69,7 +67,7 @@ if __name__ == "__main__":
     # Test 4 : Message incomplet au début du buffer
     try:
         buf.clear()
-        encapsulated = LoRa.encapsulate(LoRa, "test_4_incomplete")
+        encapsulated = test_encapsulate("test_4_incomplete")
         buf.append(b'xxxx' + encapsulated)
         print(f"\nTest 4 - Buffer après append : {buf.buffer}")
         buf.extract_message()
@@ -134,7 +132,7 @@ if __name__ == "__main__":
     # Test 7 : Extraction d'un message en deux temps (incomplet puis complet)
     try:
         msg = "Test 7 - message fragmenté"
-        encapsulated = encapsulate(msg)
+        encapsulated = test_encapsulate(msg)
         # On découpe le message en deux parties
         part1 = encapsulated[:len(encapsulated)//2]
         part2 = encapsulated[len(encapsulated)//2:]

@@ -21,7 +21,9 @@ setup(
                       "time",
                       "board",
                       "cv2",
-                      "os"],
+                      "os",
+                      "struct",
+                      "serial"],
 
 
     zip_safe=True,

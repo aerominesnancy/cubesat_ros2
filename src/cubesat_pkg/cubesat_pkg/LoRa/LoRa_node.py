@@ -5,7 +5,7 @@ from rclpy.node import Node
 import RPi.GPIO as GPIO
 import time
 
-from cubesat_pkg.LoRa.LoRa_class import LoRa
+from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
 
 
@@ -36,10 +36,10 @@ class lora(Node):
         if not self.is_valid:
             self.get_logger().warn("LoRa node is shutting down...")
         else:
-            # initialize LoRa module
+            # initialize LoRa module 
             self.lora = LoRa(self.M0, self.M1, self.AUX,
                              self.AUX_timeout, self.serial_timeout,
-                             logger=self.get_logger())
+                             logger=self.get_logger()) # pass the ROS2 node logger to LoRa class
 
             # create loop timer
             self.create_timer(self.loop_delay_milisecond/1000, self.loop)
@@ -49,11 +49,12 @@ class lora(Node):
 
     def loop(self):
         # recover any incoming messages
-        
+
         self.lora.listen_radio()
         
         # read buffer for complete messages
         message = self.lora.extract_message()
+        
         if message is not None:
             self.get_logger().info(f"Complete message received: {message}")
             self.lora.send_radio(f"ACK: {message}")

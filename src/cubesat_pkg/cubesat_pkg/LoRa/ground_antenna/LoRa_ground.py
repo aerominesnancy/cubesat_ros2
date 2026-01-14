@@ -9,9 +9,10 @@
 import time
 import threading
 import RPi.GPIO as GPIO
-from LoRa_class import LoRa
+from LoRa_class import LoRa, Just_Print_Logger
 
-lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=4, AUX_timeout=5, serial_timeout=5)
+# Initialize LoRa module with GPIO pins and timeouts
+lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, AUX_timeout=5, serial_timeout=5, logger=Just_Print_Logger())
 
 
 # Thread to continuously receive messages

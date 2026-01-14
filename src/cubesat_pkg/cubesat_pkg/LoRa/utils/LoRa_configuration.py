@@ -8,6 +8,7 @@ La fonction read_configuration_33S() affiche toutes les valeurs de
 configuration du module disponible dans la datasheet.
 
 Il est important de vérifier que la configuration est la même pour les 2 modules LoRa utilisés (émetteur et récepteur).
+(Attention la methode de lecture de la configuration difere selon le modèle de module LoRa utilisé : 33s != 37s)
 """
 
 # ============================ GPIO Setup ============================

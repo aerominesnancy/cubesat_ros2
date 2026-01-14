@@ -5,9 +5,7 @@ from rclpy.node import Node
 import RPi.GPIO as GPIO
 import time
 
-import sys
-sys.path.append("home/cubesat/ros_ws/src/cubesat_pkg/cubesat_pkg/LoRa/")
-from LoRa_class import LoRa
+from cubesat_pkg.LoRa.LoRa_class import LoRa
 
 
 

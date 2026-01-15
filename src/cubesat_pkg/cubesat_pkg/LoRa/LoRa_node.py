@@ -73,7 +73,7 @@ class lora(Node):
                 self.get_logger().error(f"Failed to update system time: {e}")
         
         if msg_type == "picture_ask":
-            self.lora.send_radio(255*np.ones((480,640)), "picture")
+            self.lora.send_radio(255*np.ones((48,64)), "picture")
         
 
 

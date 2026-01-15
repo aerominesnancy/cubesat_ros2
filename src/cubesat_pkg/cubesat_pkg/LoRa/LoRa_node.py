@@ -56,7 +56,7 @@ class lora(Node):
         msg_type, message = self.lora.extract_message()
 
         # Acknowledge received messages
-        if msg_type is not None and message is not None:
+        if msg_type is not None:
             self.get_logger().info(f"Complete message received: {message}")
             self.lora.send_radio(f"ACK: Received your {msg_type} message.", "string")
         else:
@@ -73,7 +73,7 @@ class lora(Node):
                 self.get_logger().error(f"Failed to update system time: {e}")
         
         if msg_type == "picture_ask":
-            self.lora.send_radio(np.ones((100,100)), "picture")
+            self.lora.send_radio(255*np.ones((480,640)), "picture")
         
 
 

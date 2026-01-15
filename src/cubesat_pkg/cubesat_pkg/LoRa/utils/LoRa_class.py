@@ -1,6 +1,7 @@
 import struct
 import serial
 import time
+import numpy as np
 try:
     import RPi.GPIO as GPIO
 except ImportError:
@@ -33,12 +34,20 @@ class Just_Print_Logger():
 
 
 
+
 class LoRa():
     START_MARKER = b'\xAA\xBB'  # Marqueur de début
     END_MARKER = b'\xCC\xDD'    # Marqueur de fin
     id_to_type = {0x01: "int",
                   0x02: "string",
-                  0x03: "timestamp_update"}
+                  0x03: "timestamp_update",
+                
+                  0x90: "picture",
+                  0x91: "picture_start",
+                  0x92: "picture_data",
+                  0x93: "picture_end",
+                  0x94: "picture_ask"}
+    
     type_to_id = {v: k for k, v in id_to_type.items()}
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
@@ -179,6 +188,42 @@ def encapsulate(message, msg_type:str,type_to_id, START_MARKER, END_MARKER, logg
         else:
             logger.error(f"Le message doit être de type int ou float pour l'encapsulation de type 'timestamp_update'.")
             return None
+    
+    elif msg_type == "picture":
+        if not isinstance(message, type(np.array(0))):
+            logger.error(f"Le message doit être de type numpy.array pour l'encapsulation de type 'picture'.")
+            return None
+        
+        nb_line, nb_column = message.shape
+
+        # un premier message indique la taille de l'image
+        start_message = (START_MARKER + struct.pack('>B', type_to_id["picture_start"]) + struct.pack('>H', 4) 
+                        + struct.pack(">H", nb_line) 
+                        + struct.pack(">H", nb_column) 
+                        + END_MARKER )
+        
+        # on envoie l'image ligne par ligne
+        data_message = bytearray()
+        for i in range(nb_line):
+            line_byte = bytearray()
+            for j in range(nb_column):
+                value = max(0,min(255, int(message[i][j])))
+                line_byte += struct.pack(">B", value)
+
+            data_message += (START_MARKER + struct.pack('>B', type_to_id["picture_data"]) + struct.pack('>H', nb_column+2) 
+                            + struct.pack(">H", i)
+                            + line_byte
+                            + END_MARKER )
+        
+        end_message = (START_MARKER + struct.pack('>B', type_to_id["picture_end"]) + struct.pack('>H', 4) 
+                        + struct.pack(">H", nb_line) 
+                        + struct.pack(">H", nb_column) 
+                        + END_MARKER )
+        
+        return start_message+start_message + data_message + end_message+end_message
+    
+    elif msg_type == "picture_ask":
+        return START_MARKER + struct.pack('>B', type_to_id["picture_ask"]) + struct.pack('>H', 0) + END_MARKER
 
     length = len(data_bytes)
 
@@ -196,6 +241,9 @@ class Buffer():
         
         self.size = 0
         self.buffer = bytearray()
+
+        self.picture_mode = False
+        self.current_picture = None
     
     def clear(self):
         self.buffer = bytearray()
@@ -236,16 +284,16 @@ class Buffer():
 
             data_type = self.id_to_type.get(full_message[2], None)
             length = struct.unpack('>H', full_message[3:5])[0]
-            data_bytes = full_message[5:5 + length]
+            data_bytes = full_message[5:-2]
 
             # validations
-            if len(full_message) <= 2+1+2+2:
+            if len(full_message) < 2+1+2+2:
                 self.clear()
-                self.logger.error("Message trop court pour être valide. Buffer vidé.")
+                self.logger.error(f"Message trop court pour être valide ({full_message}). Buffer vidé.")
                 return None,None
             if len(data_bytes) != length:
                 self.clear()
-                self.logger.error("Longueur des données incorrecte. Perte de paquets possible. Buffer vidé.")
+                self.logger.error(f"Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de paquets possible. Buffer vidé.")
                 return None,None
             if data_type is None:
                 self.clear()
@@ -265,6 +313,40 @@ class Buffer():
             elif data_type == "string":
                 return data_bytes.decode('utf-8')
             
+            elif data_type == "timestamp_update":
+                return struct.unpack('>I', data_bytes)[0]
+            
+            elif "picture" in data_type:
+                if data_type == "picture_ask":
+                    return None
+
+                elif data_type == "picture_start" and self.picture_mode == False:
+                    number_of_lines, number_of_column = struct.unpack('>HH', data_bytes)
+                    self.current_picture = np.zeros((number_of_lines, number_of_column))
+
+                    self.picture_mode = True
+                    self.logger.info(f"Début de la reception d'une image de taille {number_of_column}*{number_of_lines} pixels.")
+
+                    return None
+
+                elif data_type == "picture_end" :
+
+                    self.picture_mode = False
+                    self.logger.info("Fin de la reception de l'image.")
+
+                    return self.current_picture
+
+                elif data_type == "picture_data" and self.picture_mode == True:
+                    line_number = struct.unpack(">H", data_bytes[0:2])[0]
+                    line_data = struct.unpack(">" + "B"*len(data_bytes[2:]),data_bytes[2:])
+
+                    self.current_picture[line_number] = np.array(line_data)
+
+                    self.logger.info(f"Reception de la ligne {line_number} de l'image.")
+                    return self.current_picture[line_number]
+                
+                return None
+
         except Exception as e:
             self.logger.error(f"Erreur lors du décodage du message: {e}")
             return None

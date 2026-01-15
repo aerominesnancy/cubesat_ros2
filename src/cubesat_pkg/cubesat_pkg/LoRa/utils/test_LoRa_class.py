@@ -1,5 +1,7 @@
 from LoRa_class import LoRa, encapsulate, Buffer
 import time
+import numpy as np
+import struct
 
 if __name__ == "__main__":
 
@@ -209,7 +211,56 @@ if __name__ == "__main__":
     except Warning as w:
         print(f"❌ Test 9.2 OK: Le buffer n'a pas été nettoyé. \nMessage : {w}")
 
-    print("\n==================== Fin du protocole de test ====================\n\n")
 
+    print("\n\nTest 10 : Vérifie l'encapsulation d'un message 'picture_ask'.")
+    # Test 10 : Encapsulation d'un message 'picture_ask'
+    try:
+        buf.clear()
+        encapsulated = test_encapsulate(None, "picture_ask")
+        buf.append(encapsulated)
+        print(f"Test 10 - Encapsulation obtenue : {encapsulated}")
+        print("✅ Test 10.1 OK: Encapsulation 'picture_ask' réussie.")
+    except Exception as e:
+        print(f"❌ Test 10.1 ECHEC: {e}")
+    try:
+        msg_type, msg = buf.extract_message()
+        assert msg_type == "picture_ask" and msg == None, f"❌ Test 10.2 ECHEC : Mauvais message lu : {msg_type} / {msg}"
+        print(f"✅ Test 10.2 OK: Message bien extrait")
+    except Exception as e:
+        print(f"❌ Test 10.2 ECHEC : {e}")
+        
+
+    print("\n\nTest 11 : Vérifie la réception d'une image complète.")
+    # Test 11 : Réception d'une image complète
+    try:
+        buf.clear()
+        n,m = 5, 7
+        img = np.ones((n, m))
+        print(f"Test 11 - image \n {img}")
+        encapsulated = test_encapsulate(img, "picture")
+        print(f"Test 11 - Encapsulation obtenue : {encapsulated}")
+        print("\n✅ Test 11.1 OK: Encapsulation réussie.")
+    except Exception as e:
+        print(f"❌ Test 11.1 ECHEC: Erreur d'encapsulation : {e}")
+
+
+    try:
+        buf.append(encapsulated)
+        print("\nTest 11.2 - Encapsulation ajoutée au buffer, extraction du message...\n")
+        while buf.size > 0:
+            msg_type, msg= buf.extract_message()
+            print(msg_type, msg)
+
+            if msg_type == "picture_end" and msg is not None:
+                assert (img==msg).all(), "Images reçus différentes"
+        print(f"\n✅ Test 11.2 OK: Image reçue et décodée parfaitement !!!!!!!")
+    except Exception as e:
+        print(f"\n❌ Test 11.2 ECHEC: {e}")
+    
+    except AssertionError as e:
+        print(f"\n❌ Test 11.2 ECHEC: mauvais décodage de l'image.")
+
+
+    print("\n==================== Fin du protocole de test ====================\n\n")
 
     

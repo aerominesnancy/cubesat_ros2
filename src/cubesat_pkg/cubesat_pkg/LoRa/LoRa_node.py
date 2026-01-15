@@ -4,6 +4,7 @@ from rclpy.node import Node
 
 import RPi.GPIO as GPIO
 import time
+import numpy as np
 
 from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
@@ -70,6 +71,9 @@ class lora(Node):
                 self.get_logger().info(f"System time updated to {time.ctime(message)}")
             except Exception as e:
                 self.get_logger().error(f"Failed to update system time: {e}")
+        
+        if msg_type == "picture_ask":
+            self.lora.send_radio(np.ones((100,100)), "picture")
         
 
 

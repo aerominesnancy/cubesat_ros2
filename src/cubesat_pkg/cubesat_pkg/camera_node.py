@@ -45,6 +45,10 @@ class camera(Node):
 
 
     def take_picture(self, compression_factor = 50):
+        """ Prend une phot et l'enregistre 2 fois:
+        1 fois avec son timestamp
+        1 fois sous le nom 'last_picture' (remplacé a chaque photo)
+        """
         if self.cap is not None:
             if self.cap.isOpened():
 
@@ -53,10 +57,9 @@ class camera(Node):
                 file_name = f"test_{time.time()}.jpg"
 
                 if ret:
-                    # Convertit l'image en niveaux de gris
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     # enregistre l'image avec une qualité de 50%
-                    cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                    cv2.imwrite(self.path + file_name, frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                    cv2.imwrite(self.path + "last_picture", frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
                     self.get_logger().info(f"Picture taken and saved as '{file_name}'")
 

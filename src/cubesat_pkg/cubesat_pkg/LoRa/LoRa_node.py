@@ -4,7 +4,6 @@ from rclpy.node import Node
 
 import RPi.GPIO as GPIO
 import time
-import numpy as np
 
 from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
@@ -58,7 +57,8 @@ class lora(Node):
         # Acknowledge received messages
         if msg_type is not None:
             self.get_logger().info(f"Complete message received: {message}")
-            self.lora.send_radio(f"ACK: Received your {msg_type} message.", "string")
+            msg = self.lora.encapsulate(f"ACK: Received your {msg_type} message.", "string")
+            self.lora.add_message_to_queue(msg)
         else:
             return  # no complete message to process
         
@@ -73,10 +73,10 @@ class lora(Node):
                 self.get_logger().error(f"Failed to update system time: {e}")
         
         if msg_type == "picture_ask":
-            self.lora.send_radio(255*np.ones((48,64)), "picture")
+            self.lora.send_radio("/home/cubesat/ros2_ws/pictures/last_picture", "picture")
         
-
-
+        self.lora.send_radio()
+        
     
     def destroy_node(self):
         if self.is_valid:

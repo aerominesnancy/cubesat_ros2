@@ -7,7 +7,9 @@ if __name__ == "__main__":
 
     buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER, LoRa.id_to_type)
 
-    test_encapsulate = lambda msg, type: encapsulate(msg, type, LoRa.type_to_id, LoRa.START_MARKER, LoRa.END_MARKER)
+    test_encapsulate = lambda msg, type: encapsulate(msg, type, LoRa.type_to_id, 
+                                                     LoRa.paquet_size-LoRa.wrapper_size,
+                                                     LoRa.START_MARKER, LoRa.END_MARKER)
 
 
     print("\n==================== Protocole de test LoRa_data_encapsulation.py ====================")
@@ -231,34 +233,7 @@ if __name__ == "__main__":
         
 
     print("\n\nTest 11 : Vérifie la réception d'une image complète.")
-    # Test 11 : Réception d'une image complète
-    try:
-        buf.clear()
-        n,m = 5, 7
-        img = np.ones((n, m))
-        print(f"Test 11 - image \n {img}")
-        encapsulated = test_encapsulate(img, "picture")
-        print(f"Test 11 - Encapsulation obtenue : {encapsulated}")
-        print("\n✅ Test 11.1 OK: Encapsulation réussie.")
-    except Exception as e:
-        print(f"❌ Test 11.1 ECHEC: Erreur d'encapsulation : {e}")
-
-
-    try:
-        buf.append(encapsulated)
-        print("\nTest 11.2 - Encapsulation ajoutée au buffer, extraction du message...\n")
-        while buf.size > 0:
-            msg_type, msg= buf.extract_message()
-            print(msg_type, msg)
-
-            if msg_type == "picture_end" and msg is not None:
-                assert (img==msg).all(), "Images reçus différentes"
-        print(f"\n✅ Test 11.2 OK: Image reçue et décodée parfaitement !!!!!!!")
-    except Exception as e:
-        print(f"\n❌ Test 11.2 ECHEC: {e}")
     
-    except AssertionError as e:
-        print(f"\n❌ Test 11.2 ECHEC: mauvais décodage de l'image.")
 
 
     print("\n==================== Fin du protocole de test ====================\n\n")

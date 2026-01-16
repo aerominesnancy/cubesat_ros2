@@ -15,16 +15,33 @@ from LoRa_class import LoRa, Just_Print_Logger
 lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, AUX_timeout=5, serial_timeout=5, logger=Just_Print_Logger())
 
 
+lora.send_radio(None, "picture_ask")
+
+while True:
+        lora.listen_radio()
+        msg_type, message = lora.extract_message()
+        if message is not None and msg_type!="picture":
+            print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}", flush=True)
+        
+        if msg_type == "picture":
+            print("Image reçu")
+            print(message)
+
+        time.sleep(0.1)
+
+
+
+"""
 # Thread to continuously receive messages
 def receive_loop():
     while True:
         lora.listen_radio()
         msg_type, message = lora.extract_message()
-        if message is not None and msg_type!="picture_end":
+        if message is not None and msg_type!="picture":
             print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}", flush=True)
         
-        if msg_type == "picture_end":
-            print("Image complète reçu !")
+        if msg_type == "picture":
+            print("Image reçu")
             print(message)
 
         time.sleep(0.1)
@@ -50,3 +67,5 @@ while True:
         break
 
 lora.close()
+"""
+

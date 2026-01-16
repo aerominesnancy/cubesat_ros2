@@ -7,6 +7,8 @@ try:
 except ImportError:
     print("\n[ERROR] RPi.GPIO module not found.","\nLoRa class is not available. The only functionalities available will be :",
           "\n - data encapsulation : encapsulate() ", "\n - buffer management : Buffer()")
+import binascii
+
 
 
 class Raise_Errors_Logger():
@@ -43,16 +45,20 @@ class LoRa():
                   0x02: "string",
                   0x03: "timestamp_update",
                 
-                  0x90: "picture_data",
-                  0x91: "picture_ask"}
+                  0x90: "ask_for_file_transmission", # demande le transfert d'un fichier
+                  0x91: "ask_for_file_paquet",      # demande un certain paquet
+                  0x92: "file_paquet",              # renvoie un paquet
+                  0x93: "file_info"                 # renvoie le nombre de paquets liés au transfert
+                  }
     
     type_to_id = {v: k for k, v in id_to_type.items()}
 
     paquet_size = 240
-    wrapper_size = 7
+    wrapper_size = 9
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
                  AUX_timeout_s=5.0, serial_timeout_s=5.0,
+                 ACK_timeout_s=5.0,
                  logger=Raise_Errors_Logger()):
         
         self.logger = logger
@@ -63,10 +69,7 @@ class LoRa():
 
         self.AUX_timeout = AUX_timeout_s
         self.serial_timeout = serial_timeout_s
-        
-        # liste des message par ordre de priorités
-        self.priorities = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
-        self.messages_priority_queue = {priority : [] for priority in self.priorities}
+        self.ACK_timeout = ACK_timeout_s
 
         # setup GPIO
         GPIO.setmode(GPIO.BCM)
@@ -86,7 +89,10 @@ class LoRa():
         # create buffer for incoming messages
         self.buffer = Buffer(self.START_MARKER, self.END_MARKER,
                              self.id_to_type,
+                             self.wrapper_size,
                              self.logger)
+        
+        self.current_picture_data = None
 
 
     def wait_aux(self):
@@ -103,51 +109,12 @@ class LoRa():
         
         return True
     
-    def add_message_to_queue(self, data_bytes, priority=0):
-        # si le message est vide on l'ignore:
-        if data_bytes is None:
-            return
-        
-        # si on detecte une liste de données on utilise l'autre fonction
-        if isinstance(data_bytes, list):
-            return self.add_messages_to_queue(data_bytes, priority)
-        
-        # on vérifie le type de données
+
+
+    def send_radio(self, data_bytes):
         if not isinstance(data_bytes, bytes):
-            self.logger.warn("Data must be encapsulated (type 'bytes') before sending. No data added to queue.")
-            return
-        
-        # on ajoute a la queue
-        self.messages_priority_queue[priority].append(data_bytes)
-        
-    def add_messages_to_queue(self, list_data_bytes, priority=0):
-        # si le message est vide on l'ignore:
-        if data_bytes is None:
-            return
-        
-        # on vérifie le type de données
-        if isinstance(list_data_bytes, list):
-            for data_bytes in list_data_bytes:
-                if not isinstance(data_bytes, bytes):
-                    self.logger.warn("All the data of the list must be encapsulated (type 'bytes') before sending. No data added to queue.")
-                    return 
-        
-        # on ajoute a la queue
-        for data_bytes in list_data_bytes:
-            self.messages_priority_queue[priority].append(data_bytes)
+            self.logger.warn("The message msut be encapsulated before sending ! No message sended.")
 
-
-    def send_one_message(self):
-        no_message_to_send = True
-        for priority in self.priorities:
-            if self.messages_priority_queue[priority] == []:
-                continue
-            else:
-                data_bytes = self.messages_priority_queue[priority].pop(0)
-            
-        if no_message_to_send:
-            return
-            
         if not self.wait_aux():
             self.logger.error("Cannot send message because LoRa module is not ready.")
             return  # cannot send if AUX is not HIGH
@@ -164,6 +131,7 @@ class LoRa():
             return  
 
         self.logger.info(f"Message envoyé !")
+            
 
 
     def listen_radio(self):
@@ -180,6 +148,32 @@ class LoRa():
         return self.buffer.extract_message()
 
 
+    def wait_for_msg_type(self, message_type, timeout_s=5):
+        start = time.time()
+        
+        while time.time()-start < timeout_s:
+            self.listen_radio()
+            msg = self.extract_message()
+            
+            if msg is not None:
+                msg_type, message, checksum = msg
+            
+                if msg_type == message_type:
+                    self.logger.info(f"Message de type {message_type} reçu, attente terminée.")
+                    return message, checksum
+                
+        self.logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
+        return None
+
+
+    def wait_ACK(self, checksum):
+        message, _ = self.wait_for_msg_type(checksum)
+        if message == checksum:
+            self.logger.info(f"ACK received with checksum : {checksum}")
+            return True
+        return False
+
+
     def encapsulate(self, message, msg_type) -> bytes:
         encapsulated = encapsulate(message, msg_type, self.type_to_id, self.paquet_size-self.wrapper_size, self.START_MARKER, self.END_MARKER, self.logger)
         if encapsulated is None:
@@ -194,10 +188,20 @@ class LoRa():
         del self
 
 
+# ==============================================================================================================================
+# ==============================================================================================================================
+
+
+
+
+def calculate_checksum(data_bytes):
+    # utilisation du checksum CRC-16
+    return struct.pack(">H", binascii.crc_hqx(data_bytes, 0xffff))
 
 def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, END_MARKER, logger=Raise_Errors_Logger()) -> bytes:
     """ 
     [Marqueur de début (2 octets)]
+    [Checksum (2 octets)]
     [Type de données (1 octet)]
     [Longueur (2 octets)]
     [Données (N octets)]
@@ -208,10 +212,17 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         logger.error(f"Type de données {msg_type} non supporté pour l'encapsulation.")
         return None
 
+    # envoie d'un ACK
+    if msg_type == "ACK":
+        if isinstance(message, bytes) and len(message)==2:
+            data_bytes = message
+        else:
+            logger.error(f"Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2)")
+            return None
+
     # envoie d'un int 
     if msg_type == "int":
         if isinstance(message, int):
-            data_type = type_to_id["int"]
             data_bytes = struct.pack('>i', message) 
         else:
             logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'int'.")
@@ -220,10 +231,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
     # envoie d'un string 
     elif msg_type == "string":
         if isinstance(message, str):
-            data_type = type_to_id["string"]
             data_bytes = message.encode('utf-8')
-            if len(data_bytes) > max_data_size:
-                logger.warn(f"Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)})! Risque de perte de paquets...")
         else:
             logger.error(f"Le message doit être de type 'str' pour l'encapsulation de type 'string'.")
             return None
@@ -231,61 +239,64 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
     # envoie d'un timestamp (pour update le satelite)
     elif msg_type == "timestamp_update":
         if isinstance(message, (int, float)):
-            data_type = type_to_id["timestamp_update"]
             data_bytes = struct.pack('>I', int(message)) 
         else:
             logger.error(f"Le message doit être de type 'int' ou 'float' pour l'encapsulation de type 'timestamp_update'.")
             return None
     
-    # envoie d'une image en plusieurs paquets 
-    elif msg_type == "picture":
+    # envoi d'un fichier
+    elif msg_type == "ask_for_file_transmission":
         if not isinstance(message, str):
-            logger.error(f"Le path de l'image doit être de type 'str' pour l'encapsulation de type 'picture'.")
+            logger.error(f"Le path du fichier doit être de type 'str' pour l'encapsulation de type 'ask_for_file_transmission'.")
+            return None
+        else:
+            data_bytes = message.encode("utf-8")
+    
+    elif msg_type == "ask_for_file_paquet":
+        if isinstance(message, int):
+            data_bytes = struct.pack('>H', message) 
+        else:
+            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'ask_for_file_paquet'.")
+            return None
+        
+    elif msg_type == "file_paquet":
+        if not isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message, bytes):
+            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'.")
+            return None
+        else:
+            paquet_index, paquet_data = message
+            data_bytes = struct.pack(">H", paquet_index) + paquet_data
+
+    elif msg_type == "file_info":
+        if isinstance(message, int):
+            data_bytes = struct.pack('>H', message) 
+        else:
+            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'file_info'.")
             return None
 
-        list_msg_encapsulated = []
 
-        try:
-            with open(message, 'rb') as f:
-                data = bytearray(f.read())
-        except Exception as e:
-            logger.error(f"Erreur lors de la lecture du fichier : {e}")
-        
-        
-        n = len(data)
-        nb_of_paquets = n // max_data_size + 1
-        last_paquet_size = n % max_data_size
-
-        for i in range(nb_of_paquets - 1):
-            data_bytes = (START_MARKER + struct.pack('>B', type_to_id["picture"]) + struct.pack('>H', max_data_size) 
-                            + struct.pack(">HH", (i, nb_of_paquets))
-                            + data[i*max_data_size: (i+1)*max_data_size]  
-                            + END_MARKER )
-            list_msg_encapsulated.append(data_bytes)
-
-        if last_paquet_size > 0:
-            data_bytes = (START_MARKER + struct.pack('>B', type_to_id["picture"]) + struct.pack('>H', last_paquet_size) 
-                            + struct.pack(">HH", (i, nb_of_paquets))
-                            + data[(nb_of_paquets-1)*max_data_size:]  
-                            + END_MARKER )
-            list_msg_encapsulated.append[data_bytes]
-        
-        return list_msg_encapsulated
-    
-    elif msg_type == "picture_ask":
-        return START_MARKER + struct.pack('>B', type_to_id["picture_ask"]) + struct.pack('>H', 0) + END_MARKER
-
+    # mise en forme de l'envoie
+    data_type = type_to_id[msg_type]
     length = len(data_bytes)
+    if length > max_data_size:
+        logger.warn(f"Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)} > 240 bytes)! Risque de perte de paquets...")
+        
+    checksum = calculate_checksum(data_bytes)
+    encapsulated_msg = START_MARKER + calculate_checksum(data_bytes) + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
 
-    return START_MARKER + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
+    return checksum , encapsulated_msg
 
+
+# ==============================================================================================================================
+# ==============================================================================================================================
 
 
 class Buffer():
-    def __init__(self, START_MARKER, END_MARKER, id_to_type, logger=Raise_Errors_Logger()):
+    def __init__(self, START_MARKER, END_MARKER, id_to_type, wrapper_size, logger=Raise_Errors_Logger()):
         self.START_MARKER = START_MARKER
         self.END_MARKER = END_MARKER
         self.id_to_type = id_to_type
+        self.wrapper_size = wrapper_size
 
         self.logger = logger
         
@@ -326,37 +337,44 @@ class Buffer():
 
         # si on a trouvé un message complet au debut du buffer
         if start_index == 0 and end_index != -1:
-            full_message = self.buffer[:end_index + 2]
 
             # on enlève le message complet du buffer
+            full_message = self.buffer[:end_index + 2]
             self.buffer = self.buffer[end_index + 2:]
             self.size = len(self.buffer)
 
-            data_type = self.id_to_type.get(full_message[2], None)
-            length = struct.unpack('>H', full_message[3:5])[0]
-            data_bytes = full_message[5:-2]
+            # 1ere verification
+            if len(full_message) < self.wrapper_size:
+                self.logger.error(f"Message trop court pour être valide ({full_message}). Données supprimées.")
+                return None
 
-            # validations
-            if len(full_message) < 2+1+2+2:
-                self.clear()
-                self.logger.error(f"Message trop court pour être valide ({full_message}). Buffer vidé.")
-                return None,None
+            # decomposition du message
+            checksum = struct.unpack('>H', full_message[2:4])[0]
+            data_type = self.id_to_type.get(full_message[4], None)
+            length = struct.unpack('>H', full_message[5:7])[0]
+            data_bytes = full_message[7:-2]
+
+            # validations intégritée du message
+            if checksum != calculate_checksum(data_bytes):
+                self.logger.error(f"Checksum différent détecté. Le message est invalide. Données supprimées.")
+                return None
             if len(data_bytes) != length:
-                self.clear()
-                self.logger.error(f"Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de paquets possible. Buffer vidé.")
-                return None,None
+                self.logger.error(f"Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de paquets possible. Données supprimées.")
+                return None
             if data_type is None:
-                self.clear()
-                self.logger.error("Type de données inconnu. Buffer vidé.")
-                return None,None
+                self.logger.error("Type de données inconnu. Données supprimées.")
+                return None
 
             return data_type, self.decode_message(data_type, data_bytes)
         
         else:
-            return None,None  # No complete message found
+            return None  # No complete message found
 
     def decode_message(self, data_type, data_bytes):
         try:
+            if data_type == "ACK":
+                return data_bytes
+            
             if data_type == "int":
                 return struct.unpack('>i', data_bytes)[0]
             
@@ -366,18 +384,26 @@ class Buffer():
             elif data_type == "timestamp_update":
                 return struct.unpack('>I', data_bytes)[0]
             
-            elif "picture" in data_type:
-                if data_type == "picture_ask":
-                    return None
+            elif "file" in data_type:
+                if data_type == "ask_for_file_transmission":
+                    file_path = data_bytes.decode('utf-8')
+                    return file_path
+                
+                elif data_bytes == "ask_for_file_paquet":
+                    paquet_index = struct.unpack(">H", data_bytes)
+                    return paquet_index
 
-                elif data_type == "picture_data":
+                elif data_bytes == "file_info":
+                    nb_of_paquets = struct.unpack(">H", data_bytes)
+                    return nb_of_paquets
+
+                elif data_type == "file_paquet":
                     paquet_index = struct.unpack(">H", data_bytes[0:2])[0]
-                    number_of_paquets = struct.unpack(">H", data_bytes[2:4])[0]
-                    picture_data = struct.unpack(">" + "B"*len(data_bytes[4:]),data_bytes[4:])
+                    paquet_data = struct.unpack(">" + "B"*len(data_bytes[2:]),data_bytes[2:])
 
-                    self.logger.info(f"Reception du paquet {paquet_index}/{number_of_paquets} de l'image.")
+                    self.logger.info(f"Reception du paquet {paquet_index} du fichier en cours.")
 
-                    return (paquet_index, number_of_paquets, picture_data)
+                    return (paquet_index, paquet_data)
                 
                 return None
 

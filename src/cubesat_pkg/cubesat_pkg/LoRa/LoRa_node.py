@@ -40,6 +40,7 @@ class lora(Node):
             self.lora = LoRa(self.M0, self.M1, self.AUX,
                              self.AUX_timeout, self.serial_timeout,
                              logger=self.get_logger()) # pass the ROS2 node logger to LoRa class
+            self.current_file_paquets = []
 
             # create loop timer
             self.create_timer(self.loop_delay_milisecond/1000, self.loop)
@@ -52,31 +53,60 @@ class lora(Node):
         self.lora.listen_radio()
         
         # read buffer for complete messages
-        msg_type, message = self.lora.extract_message()
+        msg = self.lora.extract_message()
 
+        # on quitte la boucle si rien n'est reçu
+        if msg is None:
+            return
+        
+
+        msg_type, message, checksum = msg
+        
         # Acknowledge received messages
-        if msg_type is not None:
-            self.get_logger().info(f"Complete message received: {message}")
-            msg = self.lora.encapsulate(f"ACK: Received your {msg_type} message.", "string")
-            self.lora.add_message_to_queue(msg)
-        else:
-            return  # no complete message to process
-        
-        # Process specific message types
-        if msg_type == "timestamp_update":
-            # Update system time
+        self.get_logger().info(f"Complete message received: {message}")
+        msg = self.lora.encapsulate(checksum, "ACK")
+        self.lora.send_radio(msg)
+
+        if "file" in msg_type:
+            self.handle_file_transfert(msg_type, message)
+
+    
+    def handle_file_transfert(self, message_type, message):
+        if message_type == "ask_for_file_transfert":
+            file_path = message
             try:
-                import os
-                os.system(f'sudo date -s @{message}')
-                self.get_logger().info(f"System time updated to {time.ctime(message)}")
-            except Exception as e:
-                self.get_logger().error(f"Failed to update system time: {e}")
+                with open(file_path, 'rb') as file:
+                    data = file.read()
+                
+                max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size
+                self.current_file_paquets = [data[i:i+max_paquet_size] for i in range(0, len(data), max_paquet_size)]
+                nb_of_paquets = len(self.current_file)
+
+                _, msg = self.lora.encapsulate(nb_of_paquets, "file_info")
+                self.lora.send_radio(msg)
+
+            except:
+                self.get_logger().error(f"Erreur lors de l'ouverture du fichier {file_path}. Demande de transfert annulée.")
+                _, msg = self.lora.encapsulate("Erreur d'ouverture de fichier", "string")
+                self.lora.send_radio(msg)
+                return
+            
+        if message_type == "ask_for_file_paquet":
+            paquet_index = message
+            if paquet_index<0 or paquet_index > len(self.current_file_paquets)-1:
+                self.get_logger().error(f"Paquet demandé inexistant : {paquet_index}. Demande de transfert annulée.")
+                _, msg = self.lora.encapsulate(f"Paquet demandé inexistant : {paquet_index}", "string")
+                self.lora.send_radio(msg)
+            
+            else:
+                _, msg = self.lora.encapsulate(self.current_file_paquets[paquet_index], "file_paquet")
+                self.lora.send_radio(msg)
+
+
         
-        if msg_type == "picture_ask":
-            self.lora.send_radio("/home/cubesat/ros2_ws/pictures/last_picture", "picture")
+                
         
-        self.lora.send_radio()
-        
+
     
     def destroy_node(self):
         if self.is_valid:

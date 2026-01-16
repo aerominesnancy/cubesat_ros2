@@ -5,7 +5,7 @@ import struct
 
 if __name__ == "__main__":
 
-    buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER, LoRa.id_to_type)
+    buf = Buffer(LoRa.START_MARKER, LoRa.END_MARKER, LoRa.id_to_type, LoRa.wrapper_size)
 
     test_encapsulate = lambda msg, type: encapsulate(msg, type, LoRa.type_to_id, 
                                                      LoRa.paquet_size-LoRa.wrapper_size,

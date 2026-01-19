@@ -244,7 +244,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
             return None
         
     elif msg_type == "file_paquet":
-        if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message, bytes):
+        if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message[1], bytes):
             paquet_index, paquet_data = message
             data_bytes = struct.pack(">H", paquet_index) + paquet_data
         else:

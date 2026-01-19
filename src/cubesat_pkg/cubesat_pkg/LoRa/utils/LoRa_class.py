@@ -113,7 +113,7 @@ class LoRa():
 
     def send_radio(self, data_bytes):
         if not isinstance(data_bytes, bytes):
-            self.logger.warn("The message msut be encapsulated before sending ! No message sended.")
+            self.logger.warn("The message must be encapsulated before sending ! No message sended.")
 
         if not self.wait_aux():
             self.logger.error("Cannot send message because LoRa module is not ready.")
@@ -217,7 +217,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, bytes) and len(message)==2:
             data_bytes = message
         else:
-            logger.error(f"Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2)")
+            logger.error(f"Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2). Message actuel : (type : {type(message)}) {message}")
             return None
 
     # envoie d'un int 
@@ -225,7 +225,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, int):
             data_bytes = struct.pack('>i', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'int'.")
+            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'int'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoie d'un string 
@@ -233,7 +233,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, str):
             data_bytes = message.encode('utf-8')
         else:
-            logger.error(f"Le message doit être de type 'str' pour l'encapsulation de type 'string'.")
+            logger.error(f"Le message doit être de type 'str' pour l'encapsulation de type 'string'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoie d'un timestamp (pour update le satelite)
@@ -241,13 +241,13 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, (int, float)):
             data_bytes = struct.pack('>I', int(message)) 
         else:
-            logger.error(f"Le message doit être de type 'int' ou 'float' pour l'encapsulation de type 'timestamp_update'.")
+            logger.error(f"Le message doit être de type 'int' ou 'float' pour l'encapsulation de type 'timestamp_update'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoi d'un fichier
     elif msg_type == "ask_for_file_transmission":
         if not isinstance(message, str):
-            logger.error(f"Le path du fichier doit être de type 'str' pour l'encapsulation de type 'ask_for_file_transmission'.")
+            logger.error(f"Le path du fichier doit être de type 'str' pour l'encapsulation de type 'ask_for_file_transmission'. Message actuel : (type : {type(message)}) {message}")
             return None
         else:
             data_bytes = message.encode("utf-8")
@@ -256,12 +256,12 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, int):
             data_bytes = struct.pack('>H', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'ask_for_file_paquet'.")
+            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'ask_for_file_paquet'. Message actuel : (type : {type(message)}) {message}")
             return None
         
     elif msg_type == "file_paquet":
         if not isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message, bytes):
-            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'.")
+            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'. Message actuel : (type : {type(message)}) {message}")
             return None
         else:
             paquet_index, paquet_data = message
@@ -271,7 +271,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, int):
             data_bytes = struct.pack('>H', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'file_info'.")
+            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'file_info'. Message actuel : (type : {type(message)}) {message}")
             return None
 
 

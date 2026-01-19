@@ -76,11 +76,14 @@ class lora(Node):
     def handle_file_transfert(self, message_type, message):
         if message_type == "ask_for_file_transmission":
             file_path = message
+            with open(file_path, 'rb') as file:
+                    data = file.read()
             try:
                 with open(file_path, 'rb') as file:
                     data = file.read()
             except:
                 self.get_logger().error(f"Erreur lors de l'ouverture du fichier {file_path}. Demande de transfert annulée.")
+                return
 
             # if the file has been read properly
             max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size
@@ -89,7 +92,7 @@ class lora(Node):
 
             _, msg = self.lora.encapsulate(nb_of_paquets, "file_info")
             self.lora.send_bytes(msg)
-            
+
             
         if message_type == "ask_for_file_paquet":
             paquet_index = message

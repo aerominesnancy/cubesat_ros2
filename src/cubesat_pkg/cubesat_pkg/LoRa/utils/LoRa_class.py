@@ -319,10 +319,10 @@ class Buffer():
         end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
         # si on detecte des reliquats dans le buffer, on le vide
-        if start_index == -1 and self.size > 0:
+        if start_index == -1 and self.size >= 2:
             self.clear()
             self.logger.warn("Reliquats détecté dans le buffer, buffer vidé.")
-            return None,None
+            return None
         
         # si on detecte des données avant le premier message, on les supprime
         elif start_index > 0 and end_index > start_index:
@@ -365,7 +365,7 @@ class Buffer():
                 self.logger.error("Type de données inconnu. Données supprimées.")
                 return None
 
-            return data_type, self.decode_message(data_type, data_bytes)
+            return data_type, self.decode_message(data_type, data_bytes), checksum
         
         else:
             return None  # No complete message found

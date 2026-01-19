@@ -85,7 +85,7 @@ class lora(Node):
                 return
 
             # if the file has been read properly
-            max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size
+            max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size - 2 # on ajoute 2 octets pour le numéro du paquet
             self.current_file_paquets = [data[i:i+max_paquet_size] for i in range(0, len(data), max_paquet_size)]
             nb_of_paquets = len(self.current_file_paquets)
             self.lora.send_message(nb_of_paquets, "file_info")

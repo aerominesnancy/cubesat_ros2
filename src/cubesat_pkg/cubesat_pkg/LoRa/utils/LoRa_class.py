@@ -101,7 +101,7 @@ class LoRa():
         start_time = time.time()
 
         while (GPIO.input(self.AUX) == GPIO.LOW) and (time.time() - start_time < self.AUX_timeout):
-            time.sleep(0.1)
+            time.sleep(0.001)
         
         if GPIO.input(self.AUX) == GPIO.LOW:
             self.logger.warn("Timeout waiting for LoRa module to be ready (AUX pin HIGH).")
@@ -263,7 +263,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
     data_type = type_to_id[msg_type]
     length = len(data_bytes)
     if length > max_data_size:
-        logger.warn(f"Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)} > 240 bytes)! Risque de perte de paquets...")
+        logger.warn(f"Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)} > {max_data_size} bytes)! Risque de perte de paquets...")
         
     checksum = calculate_checksum(data_bytes)
     encapsulated_msg = START_MARKER + calculate_checksum(data_bytes) + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER

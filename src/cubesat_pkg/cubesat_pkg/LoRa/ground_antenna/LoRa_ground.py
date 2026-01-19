@@ -16,7 +16,7 @@ from LoRa_class import LoRa, Just_Print_Logger
 logger = Just_Print_Logger()
 lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=logger)
 
-
+"""
 # Thread to continuously receive messages
 def receive_loop():
     while True:
@@ -30,7 +30,7 @@ def receive_loop():
 
 receiver_thread = threading.Thread(target=receive_loop, daemon=True)
 receiver_thread.start()
-
+"""
 
 
 def wait_for_msg_type(message_type, timeout_s=5):

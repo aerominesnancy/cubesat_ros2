@@ -19,7 +19,7 @@ lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=logger)
 
 def ask_for_file_transmission(file_path):
     _, msg = lora.encapsulate(file_path, "ask_for_file_transmission")
-    lora.send_radio(msg)
+    lora.send_bytes(msg)
 
     msg = lora.wait_for_msg_type("file_info")
     if msg == None:
@@ -31,7 +31,7 @@ def ask_for_file_transmission(file_path):
 
 def ask_for_paquet(paquet_index):
     _, msg = lora.encapsulate(paquet_index, "ask_for_file_paquet")
-    lora.send_radio(msg)
+    lora.send_bytes(msg)
 
 
     # on lit 'n' paquets avant d'annuler la demande
@@ -78,7 +78,7 @@ lora.close()
         ACK_received = False
 
         checksum, data_bytes = data_bytes
-        self.send_radio(data_bytes)
+        self.send_bytes(data_bytes)
         ACK_received = self.wait_ACK(checksum)
         
         for i in range(2, number_of_try+1):
@@ -86,7 +86,7 @@ lora.close()
                 break
             self.logger.warn(f"No ACK received. Message sended again (try {i+2}/{number_of_try}). Please wait...")
             checksum, data_bytes = data_bytes
-            self.send_radio(data_bytes)
+            self.send_bytes(data_bytes)
             ACK_received = self.wait_ACK(checksum)
             
 
@@ -112,13 +112,13 @@ receiver_thread.start()
 
 
 # test sending messages
-lora.send_radio("test string", "string")
+lora.send_bytes("test string", "string")
 time.sleep(1)
-lora.send_radio(42, "int")
+lora.send_bytes(42, "int")
 time.sleep(1)
-lora.send_radio(time.time(), "timestamp_update")
+lora.send_bytes(time.time(), "timestamp_update")
 time.sleep(1)
-lora.send_radio(None, "picture_ask")
+lora.send_bytes(None, "picture_ask")
 
 print("End of main thread, quit with Ctrl+C to stop receiving.")
 while True:

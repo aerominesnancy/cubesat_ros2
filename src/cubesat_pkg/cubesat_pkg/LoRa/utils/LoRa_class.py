@@ -111,7 +111,7 @@ class LoRa():
     
 
 
-    def send_radio(self, data_bytes):
+    def send_bytes(self, data_bytes):
         if not isinstance(data_bytes, bytes):
             self.logger.warn("The message must be encapsulated before sending ! No message sended.")
 
@@ -131,6 +131,15 @@ class LoRa():
             return  
 
         self.logger.info(f"Message envoyé !")
+
+    def send_message(self, message, message_type:str):
+        encapsulation = self.encapsulate(message, message_type)
+        self.logger.info(f"Sending {message_type}...")
+        if encapsulation is not None:
+            checksum, bytes_message = encapsulation
+            self.lora.send_bytes(bytes_message)
+
+            return checksum
             
 
 

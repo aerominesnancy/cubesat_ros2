@@ -97,8 +97,7 @@ class lora(Node):
                 self.get_logger().error(f"Paquet demandé inexistant : {paquet_index}. Demande de transfert annulée.")
             
             else:
-                _, msg = self.lora.encapsulate(self.current_file_paquets[paquet_index], "file_paquet")
-                self.lora.send_bytes(msg)
+                self.lora.send_message((paquet_index, self.current_file_paquets[paquet_index]), "file_paquet")
 
 
         

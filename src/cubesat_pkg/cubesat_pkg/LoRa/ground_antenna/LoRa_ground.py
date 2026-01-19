@@ -35,7 +35,8 @@ receiver_thread.start()
 
 def wait_for_msg_type(message_type, timeout_s=5):
     start = time.time()
-    
+    logger.info(f"Waiting for message of type : {message_type}")
+
     while time.time()-start < timeout_s:
         lora.listen_radio()
         msg = lora.extract_message()
@@ -46,6 +47,8 @@ def wait_for_msg_type(message_type, timeout_s=5):
             if msg_type == message_type:
                 logger.info(f"Message de type {message_type} reçu, attente terminée.")
                 return message, checksum
+            else:
+                logger.info(f"Message d'un autre type reçu (type : {msg_type}) : {message}")
             
     logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
     return None

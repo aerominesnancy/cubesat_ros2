@@ -303,9 +303,10 @@ class Buffer():
         end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
         # si on detecte des reliquats dans le buffer, on le vide
-        if start_index == -1 and self.size >= 2:
-            self.clear()
+        if start_index == -1 and self.size > 2:
+            self.logger.info(f"Contenu du buffer : {self.buffer}")
             self.logger.warn("Reliquats détecté dans le buffer, buffer vidé.")
+            self.clear()
             return None
         
         # si on detecte des données avant le premier message, on les supprime
@@ -350,7 +351,12 @@ class Buffer():
                 self.logger.error("Type de données inconnu. Données supprimées.")
                 return None
 
-            return data_type, self.decode_message(data_type, data_bytes), checksum
+
+            decoded = self.decode_message(data_type, data_bytes)
+            if decoded is not None:
+                return data_type, decoded, checksum
+            else:
+                self.logger.warn("Le message n'a pas pu être décodé.")
         
         else:
             return None  # No complete message found
@@ -374,7 +380,7 @@ class Buffer():
                     file_path = data_bytes.decode('utf-8')
                     return file_path
                 
-                elif data_bytes == "ask_for_file_paquet":
+                elif data_type == "ask_for_file_paquet":
                     paquet_index = struct.unpack(">H", data_bytes)
                     return paquet_index
 
@@ -389,8 +395,6 @@ class Buffer():
                     self.logger.info(f"Reception du paquet {paquet_index} du fichier en cours.")
 
                     return (paquet_index, paquet_data)
-                
-                return None
 
         except Exception as e:
             self.logger.error(f"Erreur lors du décodage du message: {e}")

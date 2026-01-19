@@ -381,11 +381,11 @@ class Buffer():
                     return file_path
                 
                 elif data_type == "ask_for_file_paquet":
-                    paquet_index = struct.unpack(">H", data_bytes)
+                    paquet_index = struct.unpack(">H", data_bytes)[0]
                     return paquet_index
 
-                elif data_bytes == "file_info":
-                    nb_of_paquets = struct.unpack(">H", data_bytes)
+                elif data_type == "file_info":
+                    nb_of_paquets = struct.unpack(">H", data_bytes)[0]
                     return nb_of_paquets
 
                 elif data_type == "file_paquet":

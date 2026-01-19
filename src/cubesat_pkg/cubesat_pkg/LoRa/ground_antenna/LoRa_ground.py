@@ -76,7 +76,8 @@ def ask_for_paquet(paquet_index):
         logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
         return
 
-    paquet_index_received, paquet_data = msg
+    paquet_msg, _ = msg
+    paquet_index_received, paquet_data = paquet_msg
 
     if paquet_index_received == paquet_index:
         logger.info(f"Reception du paquet {paquet_index}")

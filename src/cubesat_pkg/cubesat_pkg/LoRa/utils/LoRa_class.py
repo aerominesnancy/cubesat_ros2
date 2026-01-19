@@ -390,7 +390,7 @@ class Buffer():
 
                 elif data_type == "file_paquet":
                     paquet_index = struct.unpack(">H", data_bytes[0:2])[0]
-                    paquet_data = struct.unpack(">" + "B"*len(data_bytes[2:]),data_bytes[2:])
+                    paquet_data = data_bytes[2:]
 
                     self.logger.info(f"Reception du paquet {paquet_index} du fichier en cours.")
 

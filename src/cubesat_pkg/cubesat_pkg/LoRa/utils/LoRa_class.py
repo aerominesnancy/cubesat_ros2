@@ -356,7 +356,7 @@ class Buffer():
 
             # validations intégritée du message
             if checksum != calculate_checksum(data_bytes):
-                self.logger.error(f"Checksum différent détecté. Le message est invalide. Données supprimées.")
+                self.logger.error(f"Checksum différent détecté (reçu : {checksum}, calculé : {calculate_checksum(data_bytes)}). Le message est invalide. Données supprimées.")
                 return None
             if len(data_bytes) != length:
                 self.logger.error(f"Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de paquets possible. Données supprimées.")

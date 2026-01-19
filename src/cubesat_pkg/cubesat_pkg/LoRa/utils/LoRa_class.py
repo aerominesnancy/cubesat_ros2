@@ -349,7 +349,7 @@ class Buffer():
                 return None
 
             # decomposition du message
-            checksum = struct.unpack('>H', full_message[2:4])[0]
+            checksum = full_message[2:4]
             data_type = self.id_to_type.get(full_message[4], None)
             length = struct.unpack('>H', full_message[5:7])[0]
             data_bytes = full_message[7:-2]

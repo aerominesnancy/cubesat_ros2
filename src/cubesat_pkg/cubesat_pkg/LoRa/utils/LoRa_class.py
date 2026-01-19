@@ -137,7 +137,7 @@ class LoRa():
         self.logger.info(f"Sending {message_type}...")
         if encapsulation is not None:
             checksum, bytes_message = encapsulation
-            self.lora.send_bytes(bytes_message)
+            self.send_bytes(bytes_message)
 
             return checksum
             

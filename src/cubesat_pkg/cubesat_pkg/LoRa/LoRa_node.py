@@ -67,7 +67,7 @@ class lora(Node):
         self.lora.send_message(checksum, "ACK")
 
         if "file" in msg_type:
-            self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : message")
+            self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : {message}")
             self.handle_file_transfert(msg_type, message)
 
 
@@ -76,7 +76,7 @@ class lora(Node):
     def handle_file_transfert(self, message_type, message):
         if message_type == "ask_for_file_transmission":
             file_path = message
-            
+
             try:
                 with open(file_path, 'rb') as file:
                     data = file.read()

@@ -53,37 +53,32 @@ def wait_for_msg_type(message_type, timeout_s=5):
 
 
 def ask_for_file_transmission(file_path):
-    _, msg = lora.encapsulate(file_path, "ask_for_file_transmission")
-    lora.send_bytes(msg)
+    lora.send_message(file_path, "ask_for_file_transmission")
 
-    msg = lora.wait_for_msg_type("file_info")
+    msg = wait_for_msg_type("file_info")
     if msg == None:
         lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
         return
-    _, nb_of_paquets, _ = msg
+    nb_of_paquets, _ = msg
 
     return nb_of_paquets
 
+
 def ask_for_paquet(paquet_index):
-    _, msg = lora.encapsulate(paquet_index, "ask_for_file_paquet")
-    lora.send_bytes(msg)
+    lora.send_message(paquet_index, "ask_for_file_paquet")
 
+    msg = wait_for_msg_type("file_paquet")
+    if msg == None:
+        logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
+        return
 
-    # on lit 'n' paquets avant d'annuler la demande
-    for _ in range(10):
-        
-        msg = lora.wait_for_msg_type("file_paquet")
-        if msg == None:
-            logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
-            return
+    paquet_index_received, paquet_data = msg
 
-        paquet_index_received, paquet_data = msg
-
-        if paquet_index_received == paquet_index:
-            logger.info(f"Reception du paquet {paquet_index}")
-            return paquet_data
-        else:
-            logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
+    if paquet_index_received == paquet_index:
+        logger.info(f"Reception du paquet {paquet_index}")
+        return paquet_data
+    else:
+        logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
 
 
 

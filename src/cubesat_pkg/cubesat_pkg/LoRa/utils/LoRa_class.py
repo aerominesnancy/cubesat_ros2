@@ -132,13 +132,14 @@ class LoRa():
 
         self.logger.info(f"Message envoyé !")
 
+
     def send_message(self, message, message_type:str):
         encapsulation = self.encapsulate(message, message_type)
-        self.logger.info(f"Sending {message_type}...")
+        self.logger.info(f"Sending {message_type} : {message}")
+
         if encapsulation is not None:
             checksum, bytes_message = encapsulation
             self.send_bytes(bytes_message)
-
             return checksum
             
 
@@ -155,32 +156,6 @@ class LoRa():
 
     def extract_message(self) -> tuple:
         return self.buffer.extract_message()
-
-
-    def wait_for_msg_type(self, message_type, timeout_s=5):
-        start = time.time()
-        
-        while time.time()-start < timeout_s:
-            self.listen_radio()
-            msg = self.extract_message()
-            
-            if msg is not None:
-                msg_type, message, checksum = msg
-            
-                if msg_type == message_type:
-                    self.logger.info(f"Message de type {message_type} reçu, attente terminée.")
-                    return message, checksum
-                
-        self.logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
-        return None
-
-
-    def wait_ACK(self, checksum):
-        message, _ = self.wait_for_msg_type(checksum)
-        if message == checksum:
-            self.logger.info(f"ACK received with checksum : {checksum}")
-            return True
-        return False
 
 
     def encapsulate(self, message, msg_type) -> bytes:
@@ -323,7 +298,7 @@ class Buffer():
         self.buffer.extend(data)
         self.size += len(data)
 
-    def extract_message(self) -> str:
+    def extract_message(self, remove_from_buffer = True) -> str:
         start_index = self.buffer.find(self.START_MARKER)
         end_index = self.buffer.find(self.END_MARKER, start_index + 2)
 
@@ -349,8 +324,9 @@ class Buffer():
 
             # on enlève le message complet du buffer
             full_message = self.buffer[:end_index + 2]
-            self.buffer = self.buffer[end_index + 2:]
-            self.size = len(self.buffer)
+            if remove_from_buffer:
+                self.buffer = self.buffer[end_index + 2:]
+                self.size = len(self.buffer)
 
             # 1ere verification
             if len(full_message) < self.wrapper_size:

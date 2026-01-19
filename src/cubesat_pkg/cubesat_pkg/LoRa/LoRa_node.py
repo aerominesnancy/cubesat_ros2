@@ -67,8 +67,10 @@ class lora(Node):
         self.lora.send_message(checksum, "ACK")
 
         if "file" in msg_type:
-            self.get_logger().info(f"Handling file transfert (received message type : {msg_type}).")
+            self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : message")
             self.handle_file_transfert(msg_type, message)
+
+
 
     
     def handle_file_transfert(self, message_type, message):
@@ -77,26 +79,22 @@ class lora(Node):
             try:
                 with open(file_path, 'rb') as file:
                     data = file.read()
-                
-                max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size
-                self.current_file_paquets = [data[i:i+max_paquet_size] for i in range(0, len(data), max_paquet_size)]
-                nb_of_paquets = len(self.current_file)
-
-                _, msg = self.lora.encapsulate(nb_of_paquets, "file_info")
-                self.lora.send_bytes(msg)
-
             except:
                 self.get_logger().error(f"Erreur lors de l'ouverture du fichier {file_path}. Demande de transfert annulée.")
-                _, msg = self.lora.encapsulate("Erreur d'ouverture de fichier", "string")
-                self.lora.send_bytes(msg)
-                return
+
+            # if the file has been read properly
+            max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size
+            self.current_file_paquets = [data[i:i+max_paquet_size] for i in range(0, len(data), max_paquet_size)]
+            nb_of_paquets = len(self.current_file)
+
+            _, msg = self.lora.encapsulate(nb_of_paquets, "file_info")
+            self.lora.send_bytes(msg)
+            
             
         if message_type == "ask_for_file_paquet":
             paquet_index = message
             if paquet_index<0 or paquet_index > len(self.current_file_paquets)-1:
                 self.get_logger().error(f"Paquet demandé inexistant : {paquet_index}. Demande de transfert annulée.")
-                _, msg = self.lora.encapsulate(f"Paquet demandé inexistant : {paquet_index}", "string")
-                self.lora.send_bytes(msg)
             
             else:
                 _, msg = self.lora.encapsulate(self.current_file_paquets[paquet_index], "file_paquet")

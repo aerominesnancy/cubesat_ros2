@@ -17,6 +17,41 @@ logger = Just_Print_Logger()
 lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=logger)
 
 
+# Thread to continuously receive messages
+def receive_loop():
+    while True:
+        lora.listen_radio()
+        msg = lora.extract_message(remove_from_buffer = False)
+        if msg is not None:
+            msg_type, message, _ = msg
+            logger.info(f"Message received (type : {msg_type}) : {message}")
+
+        time.sleep(0.1)
+
+receiver_thread = threading.Thread(target=receive_loop, daemon=True)
+receiver_thread.start()
+
+
+
+def wait_for_msg_type(message_type, timeout_s=5):
+    start = time.time()
+    
+    while time.time()-start < timeout_s:
+        lora.listen_radio()
+        msg = lora.extract_message()
+        
+        if msg is not None:
+            msg_type, message, checksum = msg
+        
+            if msg_type == message_type:
+                logger.info(f"Message de type {message_type} reçu, attente terminée.")
+                return message, checksum
+            
+    logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
+    return None
+
+
+
 def ask_for_file_transmission(file_path):
     _, msg = lora.encapsulate(file_path, "ask_for_file_transmission")
     lora.send_bytes(msg)

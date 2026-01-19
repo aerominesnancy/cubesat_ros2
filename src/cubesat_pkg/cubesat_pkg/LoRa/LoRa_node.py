@@ -72,7 +72,7 @@ class lora(Node):
 
     
     def handle_file_transfert(self, message_type, message):
-        if message_type == "ask_for_file_transfert":
+        if message_type == "ask_for_file_transmission":
             file_path = message
             try:
                 with open(file_path, 'rb') as file:

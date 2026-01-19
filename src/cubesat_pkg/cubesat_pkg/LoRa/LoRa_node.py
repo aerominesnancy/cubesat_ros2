@@ -63,7 +63,7 @@ class lora(Node):
         msg_type, message, checksum = msg
         
         # Acknowledge received messages
-        self.get_logger().info(f"Complete message received: {message}.")
+        self.get_logger().info(f"Complete message received: (type : {msg_type}) {message}.")
         self.lora.send_message(checksum, "ACK")
 
         if "file" in msg_type:

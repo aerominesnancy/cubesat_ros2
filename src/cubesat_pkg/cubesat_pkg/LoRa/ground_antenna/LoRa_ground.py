@@ -61,6 +61,7 @@ def ask_for_file_transmission(file_path):
         return
     nb_of_paquets, _ = msg
 
+    lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
     return nb_of_paquets
 
 

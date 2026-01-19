@@ -154,8 +154,8 @@ class LoRa():
             pass
 
 
-    def extract_message(self) -> tuple:
-        return self.buffer.extract_message()
+    def extract_message(self, remove_from_buffer = True) -> tuple:
+        return self.buffer.extract_message(remove_from_buffer)
 
 
     def encapsulate(self, message, msg_type) -> bytes:
@@ -244,12 +244,12 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
             return None
         
     elif msg_type == "file_paquet":
-        if not isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message, bytes):
-            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'. Message actuel : (type : {type(message)}) {message}")
-            return None
-        else:
+        if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message, bytes):
             paquet_index, paquet_data = message
             data_bytes = struct.pack(">H", paquet_index) + paquet_data
+        else:
+            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'. Message actuel : (type : {type(message)}) {message}")
+            return None
 
     elif msg_type == "file_info":
         if isinstance(message, int):

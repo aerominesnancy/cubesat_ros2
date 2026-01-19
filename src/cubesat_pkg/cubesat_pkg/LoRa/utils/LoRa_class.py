@@ -214,7 +214,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
 
     # envoie d'un ACK
     if msg_type == "ACK":
-        if isinstance(message, bytes) and len(message)==2:
+        if isinstance(message, (bytes, bytearray)) and len(message)==2:
             data_bytes = message
         else:
             logger.error(f"Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2). Message actuel : (type : {type(message)}) {message}")

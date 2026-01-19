@@ -64,9 +64,10 @@ class lora(Node):
         
         # Acknowledge received messages
         self.get_logger().info(f"Complete message received: {message}")
-        _, ack_message = self.lora.encapsulate(checksum, "ACK")
-        
-        self.lora.send_radio(ack_message)
+        encapsulation = self.lora.encapsulate(checksum, "ACK")
+        if encapsulation is not None:
+            _, ack_message = encapsulation
+            self.lora.send_radio(ack_message)
 
         if "file" in msg_type:
             self.handle_file_transfert(msg_type, message)

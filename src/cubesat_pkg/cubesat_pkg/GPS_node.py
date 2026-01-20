@@ -12,7 +12,7 @@ class GPS(Node):
 
         self.publisher_ = self.create_publisher(NavSatFix, 'gps_data', 10)
         # uart2 are GPIO (for raspberry pi 4) 4 (TX) and 5 (RX)
-        self.serial_port = serial.Serial('/dev/serial2', baudrate=9600, timeout=1)
+        self.serial_port = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
     def read_gps_data(self):

@@ -15,6 +15,8 @@ class GPS(Node):
         self.serial_port = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
+        self.get_logger().info('GPS node has been started.')
+
     def read_gps_data(self):
         try:
             line = self.serial_port.readline().decode('utf-8').strip()
@@ -51,7 +53,7 @@ def main(args=None):
             rclpy.spin(gps_node)
 
     except KeyboardInterrupt:
-        gps_node.get_logger().warn('LoRa node interrupted and is shutting down...')
+        gps_node.get_logger().warn('GPS node interrupted and is shutting down...')
 
     finally:
         if rclpy.ok():  # if the node is still running

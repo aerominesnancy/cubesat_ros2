@@ -12,7 +12,7 @@ class GPS(Node):
 
         self.publisher_ = self.create_publisher(NavSatFix, 'gps_data', 10)
         # uart2 are GPIO (for raspberry pi 4) 4 (TX) and 5 (RX)
-        self.ser = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
+        self.ser = serial.Serial('/dev/ttyAMA2', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.read_gps_data()
@@ -21,25 +21,12 @@ class GPS(Node):
     def read_gps_data(self):
         try:
             if self.ser.in_waiting > 0:
-                line = self.ser.read(self.ser.in_waiting).decode('utf-8').strip()
+                line = self.ser.read(self.ser.in_waiting)
                 self.get_logger().info(f'Received GPS data: {line}')
-            if line.startswith('$GPGGA'):
-                parts = line.split(',')
-                if parts[6] == '1':  # Fix quality
-                    latitude = float(parts[2][:2]) + float(parts[2][2:]) / 60.0
-                    longitude = float(parts[4][:3]) + float(parts[4][3:]) / 60.0
-                    altitude = float(parts[9])
+            else:
+                self.get_logger().info("Rien a lire...")
 
-                    msg = NavSatFix()
-                    msg.header.stamp = self.get_clock().now().to_msg()
-                    msg.header.frame_id = 'gps_frame'
-                    msg.latitude = latitude
-                    msg.longitude = longitude
-                    msg.altitude = altitude
-                    msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_UNKNOWN
 
-                    self.publisher_.publish(msg)
-                    self.get_logger().info(f'Published GPS data: Latitude={latitude}, Longitude={longitude}, Altitude={altitude}')
         except Exception as e:
             self.get_logger().error(f'Error reading GPS data: {e}')
 

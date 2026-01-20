@@ -15,6 +15,7 @@ class GPS(Node):
         self.serial_port = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
+        self.read_gps_data()
         self.get_logger().info('GPS node has been started.')
 
     def read_gps_data(self):

@@ -26,7 +26,7 @@ class camera(Node):
         callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
         
         if callback_delay_second == -1:
-            self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
+            self.get_logger().fatal("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
             self.get_logger().warn("Camera node is shutting down...")
             self.is_valid = False
@@ -45,6 +45,10 @@ class camera(Node):
 
 
     def take_picture(self, compression_factor = 50):
+        """ Prend une phot et l'enregistre 2 fois:
+        1 fois avec son timestamp
+        1 fois sous le nom 'last_picture' (remplacé a chaque photo)
+        """
         if self.cap is not None:
             if self.cap.isOpened():
 
@@ -53,10 +57,9 @@ class camera(Node):
                 file_name = f"test_{time.time()}.jpg"
 
                 if ret:
-                    # Convertit l'image en niveaux de gris
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     # enregistre l'image avec une qualité de 50%
-                    cv2.imwrite(self.path + file_name, gray, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                    cv2.imwrite(self.path + file_name, frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                    cv2.imwrite(self.path + "last_picture.jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
                     self.get_logger().info(f"Picture taken and saved as '{file_name}'")
 
@@ -90,6 +93,10 @@ class camera(Node):
             self.cap.release()
             self.cap = None
 
+    def destroy_node(self):
+        if self.is_valid:
+            self.cap.release()
+
             
         
 
@@ -115,7 +122,7 @@ def main(args=None):
     finally:
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent
-            camera_node.cap.release()
+            camera.destroy_node()
             rclpy.shutdown()
 
 

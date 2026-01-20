@@ -40,6 +40,23 @@ def generate_launch_description():
     parameters=[{'callback_delay_second': 5.0}]
   )
 
+  lora_node = Node(
+    package="cubesat_pkg",
+    executable="lora_node",
+    parameters=[{'loop_delay_milisecond':10,'M0_pin': 17, 'M1_pin': 27, 'AUX_pin': 22}]
+  )
+
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node, temp_hum_node_1, camera_node]
+  ld = [imu_node, motor_node,temp_hum_node_1, camera_node, lora_node]
   return LaunchDescription(ld)
+
+
+"""
+Sur le pi, on récupère maintenant les modifications du git et on reconstruit l'environnement ros2
+cd ~/ros2_ws
+git reset -hard 	# reset le pi pour eviter les conflit 
+git pull		# git pull origin "other_branch" 
+colcon build	
+# colcon build --symlink-install 	# permet d'auto build les programmes déjà présent sur le pi (qui sont uniquement modifié) (pour la session en cours)
+source ~/.bashrc  	# si jamais le programme n'est pas detecté
+"""

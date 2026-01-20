@@ -17,7 +17,6 @@ class GPS(Node):
         self.ser = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
-        self.read_gps_data()
         self.get_logger().info('GPS node has been started.')
 
     def read_gps_data(self):
@@ -34,7 +33,7 @@ class GPS(Node):
         except Exception as e:
             self.get_logger().error(f'Error reading GPS data: {e}')
 
-    def parse_nmea_sentence(sentence):
+    def parse_nmea_sentence(self, sentence):
         """
         Parse une phrase NMEA et retourne un dictionnaire
         avec type de message et champs.

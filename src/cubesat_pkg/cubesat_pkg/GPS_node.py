@@ -22,16 +22,48 @@ class GPS(Node):
 
     def read_gps_data(self):
         try:
-            if self.ser.in_waiting > 0:
-                line = self.ser.read(self.ser.in_waiting)
-                self.get_logger().info(f'Received GPS data: {line}')
-            else:
-                self.get_logger().info("Rien a lire...")
+            line = self.ser.readline()
+            if not line:
+                return
+            self.get_logger().info(f'Received GPS data.')
+            
+            nmea = self.parse_nmea_sentence(line)
+            self.get_logger().info(f'GPS data decoded : {line}')
 
 
         except Exception as e:
             self.get_logger().error(f'Error reading GPS data: {e}')
 
+    def parse_nmea_sentence(sentence):
+        """
+        Parse une phrase NMEA et retourne un dictionnaire
+        avec type de message et champs.
+        Ex: $GPGGA,123519,4807.038,N,01131.000,E,...
+        """
+        sentence = sentence.strip()
+        if not sentence.startswith(b'$'):
+            return None
+
+        # Supprimer le checksum si présent
+        if b'*' in sentence:
+            data, checksum = sentence.split(b'*')
+        else:
+            data = sentence
+
+        # Décoder en ASCII et split
+        parts = data.decode('ascii').split(',')
+        msg_type = parts[0][1:]  # enlever le $
+        fields = parts[1:]
+
+        return {'type': msg_type, 'fields': fields}
+"""
+# example of data received :
+b'\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\xacB\xa55\xd5)}!\x00\n8\xa3\x00\x00\x00\xac\x9cq}!!!!!!-!\xb4H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\xacB\xa55\xd5)q!\x00\x85aq!!!\xf9\x9c8B\x00\x00\x00\x00\x00\x00\x18(\x96H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\xacB\xa55\xd5)}!\x00Ha}!!!\xf9\x9c\xb7B\x00\x00\x00\x00\x00\x00\x18(\x92H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\xacB\xa55\xd5)q!!w{aq!!!\xf9\x9c-\x02\x14\x00\x00\x00\x00\x00\x00\x800H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\xacB\xa55\xd5)u!\x008au!!!\xf9\x9c$\x02\x05\x00\x00\x00\x00\x00\x00\x80xH\xe3\xa5\xa55\xac\xa0\xa5\xa5'
+
+# explanations here :
+#https://circuitdigest.com/microcontroller-projects/interfacing-neo6m-gps-module-with-esp32
+
+"""
 
 
 def main(args=None):

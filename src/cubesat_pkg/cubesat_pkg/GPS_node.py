@@ -12,7 +12,7 @@ class GPS(Node):
 
         self.publisher_ = self.create_publisher(NavSatFix, 'gps_data', 10)
         # uart2 are GPIO (for raspberry pi 4) 4 (TX) and 5 (RX)
-        self.serial_port = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
+        self.ser = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.read_gps_data()
@@ -20,7 +20,9 @@ class GPS(Node):
 
     def read_gps_data(self):
         try:
-            line = self.serial_port.readline().decode('utf-8').strip()
+            if self.ser.in_waiting > 0:
+                line = self.ser.read(self.ser.in_waiting).decode('utf-8').strip()
+                self.get_logger().info(f'Received GPS data: {line}')
             if line.startswith('$GPGGA'):
                 parts = line.split(',')
                 if parts[6] == '1':  # Fix quality

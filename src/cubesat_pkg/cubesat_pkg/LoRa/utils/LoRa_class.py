@@ -10,7 +10,6 @@ except ImportError:
 import binascii
 
 
-
 class Raise_Errors_Logger():
     """ This logger raises exceptions on warnings and errors.
     It is used for testing and debugging purposes (cf. __main__ section).

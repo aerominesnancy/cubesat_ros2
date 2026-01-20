@@ -11,12 +11,6 @@ Il est important de vérifier que la configuration est la même pour les 2 modul
 (Attention la methode de lecture de la configuration difere selon le modèle de module LoRa utilisé : 33s != 37s)
 """
 
-# ============================ GPIO Setup ============================
-
-M0 = 17
-M1 = 27
-AUX = 22
-
 # ========================= Datasheet values =========================
 
 UART_BAUD = {
@@ -106,11 +100,11 @@ WOR_CYCLE = {
 
 # ============================ Functions ============================
 
-def wait_aux():
+def wait_aux(pins):
     """Attend que le module soit prêt (AUX HIGH)"""
     i = 0
     print("Waiting AUX...")
-    while GPIO.input(AUX) == GPIO.LOW:
+    while GPIO.input(pins["AUX"]) == GPIO.LOW:
         print("busy",i)
         i += 1
         time.sleep(0.01)
@@ -118,11 +112,11 @@ def wait_aux():
 
 
 
-def read_configuration_33S():
+def read_configuration_33S(pins):
     print("\n\nLecture de la configuration")
-    GPIO.output(M0, GPIO.LOW)
-    GPIO.output(M1, GPIO.HIGH)
-    wait_aux()
+    GPIO.output(pins["M0"], GPIO.LOW)
+    GPIO.output(pins["M1"], GPIO.HIGH)
+    wait_aux(pins)
     time.sleep(0.5)
     
     # Trame lecture
@@ -136,7 +130,7 @@ def read_configuration_33S():
     print(trame)
     print()
     
-    wait_aux()
+    wait_aux(pins)
     
     # Lecture réponse
     time.sleep(0.5)
@@ -190,8 +184,8 @@ def read_configuration_33S():
     else:
         print("Aucune réponse du module")
 
-    GPIO.output(M0, GPIO.LOW)
-    GPIO.output(M1, GPIO.LOW)
+    GPIO.output(pins["M0"], GPIO.LOW)
+    GPIO.output(pins["M1"], GPIO.LOW)
 
 
 if __name__ == "__main__":
@@ -199,11 +193,15 @@ if __name__ == "__main__":
     print("Run program ...")
 
     # init GPIO
+    pins = {"MO" : 17,
+            "M1" : 27,
+            "AUX" : 22}
+    
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    GPIO.setup(M0, GPIO.OUT)
-    GPIO.setup(M1, GPIO.OUT)
-    GPIO.setup(AUX, GPIO.IN)
+    GPIO.setup(pins["M0"], GPIO.OUT)
+    GPIO.setup(pins["M1"], GPIO.OUT)
+    GPIO.setup(pins["AUX"], GPIO.IN)
 
     # init serial connection
     ser = serial.Serial(port='/dev/serial0',  # Raspberry Pi UART

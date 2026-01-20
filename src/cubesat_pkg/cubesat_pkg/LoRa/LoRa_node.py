@@ -120,15 +120,15 @@ class lora(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    imu_node = lora()
+    lora_node = lora()
 
     # let the node "alive" until interrupted
     try :
-        if imu_node.is_valid:
-            rclpy.spin(imu_node)
+        if lora_node.is_valid:
+            rclpy.spin(lora_node)
 
     except KeyboardInterrupt:
-        imu_node.get_logger().warn('LoRa node interrupted and is shutting down...')
+        lora_node.get_logger().warn('LoRa node interrupted and is shutting down...')
 
     finally:
         if rclpy.ok():  # if the node is still running

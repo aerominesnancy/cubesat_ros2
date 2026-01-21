@@ -61,10 +61,13 @@ class lora(Node):
         
 
         msg_type, message, checksum = msg
-        
+
+        # ACK may delay file transfert
+        """
         # Acknowledge received messages
         self.get_logger().info(f"Complete message received: (type : {msg_type}) {message}.")
         self.lora.send_message(checksum, "ACK")
+        """
 
         if "file" in msg_type:
             self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : {message}")

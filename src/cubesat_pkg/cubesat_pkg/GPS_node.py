@@ -179,9 +179,12 @@ class GPS(Node):
             self.buffer = self.buffer[self.buffer.rfind(ubx_starter):]
             
             # extract the latest NMEA messages
-            if ubx_starter in self.buffer:
-                data = self.buffer[self.buffer.rfind(NMEA_starter):]
+            if not NMEA_starter in self.buffer:
                 self.buffer = b'' # clear buffer
+                return
+
+            data = self.buffer[self.buffer.rfind(NMEA_starter):]
+            self.buffer = b'' # clear buffer
 
         return data
         

@@ -29,9 +29,10 @@ class GPS(Node):
             if not line:
                 self.get_logger().warn(f"No data received from GPS module.")
                 return
-            self.get_logger().info(f'Received GPS data : {line}')
             
             nmea = self.parse_nmea_sentence(line)
+            if not nmea:
+                self.get_logger().warn(f"Invalid NMEA sentence.")
             self.get_logger().info(f'GPS data decoded : {nmea}')
 
 

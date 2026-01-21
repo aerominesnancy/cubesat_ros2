@@ -5,6 +5,9 @@ from sensor_msgs.msg import NavSatFix
 import time
 import serial
 
+from nmea import input_stream, data_frame
+
+
 class GPS(Node):
     def __init__(self):
         super().__init__('gps_node')
@@ -16,6 +19,20 @@ class GPS(Node):
         # ttyAMA* index can change depending on the number of serial port on the raspberry pi
 
         # GPS module use baud=38400 by default
+        
+        stream = input_stream.GenericInputStream.open_stream('/dev/ttyAMA1', baudrate=38400)
+
+        with stream:
+            new_frame = data_frame.DataFrame.get_next_frame(stream)
+
+            print("Current GPS time:", new_frame.gps_time)
+            print("Current Latitude:", new_frame.latitude)
+            print("Current Longitude:", new_frame.longitude)
+            print("Current Speed:", new_frame.velocity)
+            print("Current heading:", new_frame.track)
+        
+        return
+
         self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
 
         self.timer = self.create_timer(1.0, self.read_gps_data)

@@ -52,12 +52,12 @@ class GPS(Node):
         start_index = sentence.find("$GP")
         parasite = sentence[:start_index]
         data = sentence[start_index:]
-        
+
         if parasite:
-            self.get_logger().warn(f"Parasite characters found in NMEA sentence : {parasite}")
+            self.get_logger().warn(f"Parasite characters found in NMEA sentence : {sentence}")
 
         # Supprimer le checksum si présent
-        data, _ = data.split('*') if '*' in sentence else sentence
+        data, checksum = data.split('*') if '*' in data else data
 
         # Décoder en ASCII et split
         parts = data.split(',')

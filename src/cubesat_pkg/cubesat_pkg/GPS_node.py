@@ -18,20 +18,20 @@ class GPS(Node):
         for baud in [4800, 9600, 19200, 38400, 57600, 115200]:
             self.get_logger().info(f'Trying to connect to GPS module at {baud} baud...')
             time.sleep(1)
-            try:
-                self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
+            start = time.time()
 
-                line = None
-                while not line:
-                    line = self.ser.readline()
-                    if not line:
-                        self.get_logger().warn(f"No data received from GPS module.")
-                    self.get_logger().info(f'Received GPS data : {line}')
-                self.ser.close()
+            self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
 
-            except KeyboardInterrupt:
-                self.get_logger().info(self.ser.read(self.ser.in_waiting()))
-                pass
+            line = None
+            while time.time() - start < 10:
+                line = self.ser.readline()
+                if not line:
+                    self.get_logger().warn(f"No data received from GPS module.")
+                self.get_logger().info(f'Received GPS data : {line}')
+
+            self.get_logger().info(self.ser.read(self.ser.in_waiting))
+            self.ser.close()
+
             
         return    
         self.timer = self.create_timer(1.0, self.read_gps_data)

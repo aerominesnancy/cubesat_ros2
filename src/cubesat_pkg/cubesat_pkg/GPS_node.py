@@ -23,10 +23,10 @@ class GPS(Node):
             self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
             self.get_logger().info(f'Connected to GPS module at {baud} baud.')
 
-            
+
             line = None
             while time.time() - start < 10:
-                line = self.ser.readline()
+                line = self.ser.readline("100")
                 if not line:
                     self.get_logger().warn(f"No data received from GPS module.")
                 self.get_logger().info(f'Received GPS data : {line}')

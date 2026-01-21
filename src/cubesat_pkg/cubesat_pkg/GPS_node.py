@@ -46,7 +46,7 @@ class GPS(Node):
         Parse une phrase NMEA et retourne un dictionnaire
         avec type de message et champs.
         """
-        sentence = sentence.decode('ascii', errors="ignore").strip()
+        sentence = sentence.decode('ascii', errors="ignore")
         self.get_logger().warn(f"received : {sentence}")
 
         # on recherche le début du message si il y a des caractères parasites avant

@@ -16,15 +16,20 @@ class GPS(Node):
         # ttyAMA* index can change depending on the number of serial port on the raspberry pi
 
         for baud in [4800, 9600, 19200, 38400, 57600, 115200]:
-            self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
+            self.get_logger().info(f'Trying to connect to GPS module at {baud} baud...')
+            try:
+                self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
 
-            line = None
-            while not line:
-                line = self.ser.readline()
-                if not line:
-                    self.get_logger().warn(f"No data received from GPS module.")
-                self.get_logger().info(f'Received GPS data : {line}')
-            self.ser.close()
+                line = None
+                while not line:
+                    line = self.ser.readline()
+                    if not line:
+                        self.get_logger().warn(f"No data received from GPS module.")
+                    self.get_logger().info(f'Received GPS data : {line}')
+                self.ser.close()
+            except KeyboardInterrupt:
+                self.get_logger().info(self.ser.read(self.ser.in_waiting()))
+                pass
             
         return    
         self.timer = self.create_timer(1.0, self.read_gps_data)

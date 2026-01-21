@@ -17,6 +17,7 @@ class GPS(Node):
 
         for baud in [4800, 9600, 19200, 38400, 57600, 115200]:
             self.get_logger().info(f'Trying to connect to GPS module at {baud} baud...')
+            time.sleep(1)
             try:
                 self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
 
@@ -27,6 +28,7 @@ class GPS(Node):
                         self.get_logger().warn(f"No data received from GPS module.")
                     self.get_logger().info(f'Received GPS data : {line}')
                 self.ser.close()
+
             except KeyboardInterrupt:
                 self.get_logger().info(self.ser.read(self.ser.in_waiting()))
                 pass

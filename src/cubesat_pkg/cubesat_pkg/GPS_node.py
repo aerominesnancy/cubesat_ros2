@@ -32,8 +32,9 @@ class GPS(Node):
             
             nmea = self.parse_nmea_sentence(line)
             if not nmea:
-                self.get_logger().warn(f"Invalid NMEA sentence.")
-            self.get_logger().info(f'GPS data decoded : {nmea}')
+                self.get_logger().warn(f"Invalid NMEA sentence. {line}")
+            else:
+                self.get_logger().info(f'GPS data decoded : {nmea}')
 
 
         except Exception as e:

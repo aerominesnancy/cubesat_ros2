@@ -49,9 +49,10 @@ class GPS(Node):
         sentence = sentence.decode('ascii', errors="ignore").strip()
 
         # on recherche le début du message si il y a des caractères parasites avant
-        parasite, data = sentence.split("$GP")
-        data = "$GP" + data
-
+        start_index = sentence.find("$GP")
+        parasite = sentence[:start_index]
+        data = sentence[start_index:]
+        
         if parasite:
             self.get_logger().warn(f"Parasite characters found in NMEA sentence : {parasite}")
 

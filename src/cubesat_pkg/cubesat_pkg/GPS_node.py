@@ -5,7 +5,7 @@ from sensor_msgs.msg import NavSatFix
 import time
 import serial
 """
-The module uses NEO-6M chip. It currently send GSV, RMC, GSA, GGA, GLL and VTG messages
+The module uses NEO-6M chip. It currently send RMC, VTG GGA, GSA, GSV(several times), GLL messages (in this order)
 and one binary message (certainly UBX) that is not decoded yet.
 
 explanations here :
@@ -137,54 +137,62 @@ class GPS(Node):
 
         # GPS module use baud=38400 by default
         self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
+        self.buffer = b'' # create a buffer to work on data
 
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.get_logger().info('GPS node has been started.')
 
+
     def read_gps_data(self):
+        """
+        messages order : RMC, VTG, GGA, GSA, GSV(several times), GLL, ubx binary
+        """
+        data = None
+
         try:
-            line = self.ser.readline()
-            if not line:
-                self.get_logger().warn(f"No data received from GPS module.")
-                return
+            if self.ser.in_waiting > 0:
+                self.buffer += self.ser.read(self.ser.in_waiting)
+                NMEA_starter = b'$GPRMC'
+                ubx_starter = b'\xb5b\x01\x03\x10\x00'
 
-            nmea = self.parse_nmea_sentence(line)
-            if not nmea:
-                self.get_logger().warn(f"Invalid NMEA sentence. {line}")
-            else:
-                self.get_logger().info(f'GPS data decoded : {nmea}')
+                # Remove all data before RMC message
+                self.buffer = self.buffer[self.buffer.find(NMEA_starter):]
 
+                # extract data before the next ubx message
+                if ubx_starter in self.buffer:
+                    data = self.buffer[:self.buffer.find(ubx_starter)]
+                    self.buffer = self.buffer[self.buffer.find(ubx_starter):]
+                    
+        except Exception as e:
+            self.get_logger().error(f"Error reading GPS buffer: {e}")
+        
+        try:
+            if data:
+                nmea = self.parse_nmea_sentence(data.decode('utf-8'))
+                if not nmea:
+                    self.get_logger().warn(f"Invalid NMEA sentence. {data}")
+                else:
+                    self.get_logger().info(f'GPS data decoded : {nmea}')
 
         except Exception as e:
-            self.get_logger().error(f'Error reading GPS data: {e}')
+            self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 
+        
+    def parse_nmea_sentence(self, data):
+        dico = {"RMC":[], "VTG":[], "GGA":[], "GSA":[], "GSV":[], "GLL":[]}
 
-    def parse_nmea_sentence(self, sentence):
-        """
-        Parse une phrase NMEA et retourne un dictionnaire
-        avec type de message et champs.
-        """
-        # remove nois before NMEA sentence
-        start_index = sentence.find(b"$GP")
-        if start_index == -1:
-            return None
-        ubx_msg = sentence[:start_index]
-        sentence = sentence[start_index:]
+        messages = data.split("$GP")
+        for message in messages:
+            msg_id = message[:3]
+            msg_data = message[3:].split(b'*')[0] # remove checksum
 
-        if ubx_msg:
-            self.get_logger().warn(f"Parasite characters found before NMEA sentence : {ubx_msg}")
+            if msg_id == "GSV":
+                dico[msg_id].append(msg_data.split(","))
+            else:
+                dico[msg_id] = msg_data.split(",")
 
-        # remove checksum
-        sentence, checksum = sentence.split(b'*')
-
-        # Ddecode ascii and split data
-        data = sentence.decode('ascii', errors='ignore').strip()
-        parts = data.split(',')
-        msg_type = parts[0][1:]  # enlever le $
-        fields = parts[1:]
-
-        return {'type': msg_type, 'fields': fields}
+        return dico
     
 
 

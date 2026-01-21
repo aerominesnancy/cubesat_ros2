@@ -17,7 +17,6 @@ class GPS(Node):
 
         # GPS module use baud=38400 by default
         self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
-        self.ser.close()
 
         self.timer = self.create_timer(1.0, self.read_gps_data)
 

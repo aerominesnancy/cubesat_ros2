@@ -4,7 +4,15 @@ from sensor_msgs.msg import NavSatFix
 
 import time
 import serial
+"""
+The module uses NEO-6M chip. It currently send GSV, RMC, GSA, GGA, GLL and VTG messages
+and one binary message (certainly UBX) that is not decoded yet.
 
+explanations here :
+https://circuitdigest.com/microcontroller-projects/interfacing-neo6m-gps-module-with-esp32
+https://fr.wikipedia.org/wiki/NMEA_0183
+
+"""
 # ===============================================================================
 # all fields end with "\r\n" (CR-LF)
 
@@ -134,7 +142,6 @@ class GPS(Node):
 
         self.get_logger().info('GPS node has been started.')
 
-
     def read_gps_data(self):
         try:
             line = self.ser.readline()
@@ -162,11 +169,11 @@ class GPS(Node):
         start_index = sentence.find(b"$GP")
         if start_index == -1:
             return None
-        parasite = sentence[:start_index]
+        ubx_msg = sentence[:start_index]
         sentence = sentence[start_index:]
 
-        if parasite:
-            self.get_logger().warn(f"Parasite characters found before NMEA sentence : {parasite}")
+        if ubx_msg:
+            self.get_logger().warn(f"Parasite characters found before NMEA sentence : {ubx_msg}")
 
         # remove checksum
         sentence, checksum = sentence.split(b'*')
@@ -180,11 +187,6 @@ class GPS(Node):
         return {'type': msg_type, 'fields': fields}
     
 
-"""
-# explanations here (nmea with baud=38400):
-#https://circuitdigest.com/microcontroller-projects/interfacing-neo6m-gps-module-with-esp32
-#https://fr.wikipedia.org/wiki/NMEA_0183
-"""
 
 
 def main(args=None):

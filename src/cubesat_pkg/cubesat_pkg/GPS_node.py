@@ -14,7 +14,19 @@ class GPS(Node):
 
         # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
         # ttyAMA* index can change depending on the number of serial port on the raspberry pi
-        self.ser = serial.Serial('/dev/ttyAMA1', baudrate=9600, timeout=1)
+
+        for baud in [4800, 9600, 19200, 38400, 57600, 115200]:
+            self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
+
+            line = None
+            while not line:
+                line = self.ser.readline()
+                if not line:
+                    self.get_logger().warn(f"No data received from GPS module.")
+                self.get_logger().info(f'Received GPS data : {line}')
+            self.ser.close()
+            
+        return    
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.get_logger().info('GPS node has been started.')
@@ -23,6 +35,7 @@ class GPS(Node):
         try:
             line = self.ser.readline()
             if not line:
+                self.get_logger().warn(f"No data received from GPS module.")
                 return
             self.get_logger().info(f'Received GPS data : {line}')
             
@@ -57,8 +70,11 @@ class GPS(Node):
         return {'type': msg_type, 'fields': fields}
 """
 # example of data received :
+b'H\xa5\x95\xd5)u!\x00\x0c(\x12\x00\x00\x00\xac\x88\x04\x02\x00\x00\x00\x00\x00\x00\x18(\x84H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\x94\n'
+b'H\xa5\x95\xd5)i!\x00\x05-\x12\x00\x00\x00\x80\x88\x05B\x00\x00\x00\x00\x00\x00\x00\x80PH\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1%\n'
+b'H\xa5\x95\xd5)e!\x00\x05ae!!!\xf9\x88qe!!!!!!\r\x14\x92H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1%\n'
 
-# explanations here :
+# explanations here (in fact it is not nmea...):
 #https://circuitdigest.com/microcontroller-projects/interfacing-neo6m-gps-module-with-esp32
 
 """

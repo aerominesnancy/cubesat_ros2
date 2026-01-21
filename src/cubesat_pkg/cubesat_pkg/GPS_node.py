@@ -55,10 +55,10 @@ class GPS(Node):
             self.get_logger().warn(f"Parasite characters found before NMEA sentence : {parasite}")
 
         # Supprimer le checksum si présent
-        data, checksum = sentence.split(b'*') if b'*' in sentence else sentence
+        sentence, checksum = sentence.split(b'*') if b'*' in sentence else sentence
 
         # Décoder en ASCII et split
-        data.decode('ascii', errors='ignore').strip()
+        data = sentence.decode('ascii', errors='ignore').strip()
         parts = data.split(',')
         msg_type = parts[0][1:]  # enlever le $
         fields = parts[1:]

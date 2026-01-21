@@ -208,7 +208,7 @@ class GPS(Node):
         longitude = nmea["RMC"][4]
 
         self.get_logger().info(f"============= GPS data ============\n"
-                                f"utc time : {time[:2] + ":" + time[2:4] + ":" + time[4:6]}\n"
+                                f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\n"
                                 f"status : {status}\n"
                                 f"latitude : {latitude}\n"
                                 f"longitude : {longitude}\n")

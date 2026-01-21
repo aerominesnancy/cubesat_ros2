@@ -185,7 +185,7 @@ class GPS(Node):
         messages = data.split("$GP")
         for message in messages:
             msg_id = message[:3]
-            msg_data = message[3:].split(b'*')[0] # remove checksum
+            msg_data = message[3:].split('*')[0] # remove checksum
 
             if msg_id == "GSV":
                 dico[msg_id].append(msg_data.split(","))

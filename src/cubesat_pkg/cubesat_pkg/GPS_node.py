@@ -15,27 +15,10 @@ class GPS(Node):
         # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
         # ttyAMA* index can change depending on the number of serial port on the raspberry pi
 
-        for baud in [4800, 9600, 19200, 38400, 57600, 115200]:
-            self.get_logger().info(f'Trying to connect to GPS module at {baud} baud...')
-            time.sleep(1)
-            start = time.time()
+        # GPS module use baud=38400 by default
+        self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
+        self.ser.close()
 
-            self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
-            self.get_logger().info(f'Connected to GPS module at {baud} baud.')
-
-
-            line = None
-            while time.time() - start < 10:
-                line = self.ser.readline("100")
-                if not line:
-                    self.get_logger().warn(f"No data received from GPS module.")
-                self.get_logger().info(f'Received GPS data : {line}')
-
-            self.get_logger().info(self.ser.read(self.ser.in_waiting))
-            self.ser.close()
-
-            
-        return    
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.get_logger().info('GPS node has been started.')
@@ -56,37 +39,32 @@ class GPS(Node):
         except Exception as e:
             self.get_logger().error(f'Error reading GPS data: {e}')
 
+
     def parse_nmea_sentence(self, sentence):
         """
         Parse une phrase NMEA et retourne un dictionnaire
         avec type de message et champs.
         Ex: $GPGGA,123519,4807.038,N,01131.000,E,...
         """
-        sentence = sentence.strip()
-        if not sentence.startswith(b'$'):
+        sentence = sentence.decode('ascii', errors="ignore").strip()
+        if not sentence.startswith('$'):
             return None
 
         # Supprimer le checksum si présent
-        if b'*' in sentence:
-            data, checksum = sentence.split(b'*')
-        else:
-            data = sentence
+        data, _ = sentence.split('*') if '*' in sentence else sentence
 
         # Décoder en ASCII et split
-        parts = data.decode('ascii').split(',')
+        parts = data.split(',')
         msg_type = parts[0][1:]  # enlever le $
         fields = parts[1:]
 
         return {'type': msg_type, 'fields': fields}
+    
+
 """
-# example of data received :
-b'H\xa5\x95\xd5)u!\x00\x0c(\x12\x00\x00\x00\xac\x88\x04\x02\x00\x00\x00\x00\x00\x00\x18(\x84H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1\x94\n'
-b'H\xa5\x95\xd5)i!\x00\x05-\x12\x00\x00\x00\x80\x88\x05B\x00\x00\x00\x00\x00\x00\x00\x80PH\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1%\n'
-b'H\xa5\x95\xd5)e!\x00\x05ae!!!\xf9\x88qe!!!!!!\r\x14\x92H\xe3\xa5\xa55\xac\xa0\xa5\xa5\x15\x08R\xa5\xa1\xa55\x15\x08B\xa5\xa5\xa5\xa5\xa5\xa5\x15\x08!\xa1%\n'
-
-# explanations here (in fact it is not nmea...):
+# explanations here (nmea with baud=38400):
 #https://circuitdigest.com/microcontroller-projects/interfacing-neo6m-gps-module-with-esp32
-
+#https://fr.wikipedia.org/wiki/NMEA_0183
 """
 
 

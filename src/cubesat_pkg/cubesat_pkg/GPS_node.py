@@ -204,15 +204,14 @@ class GPS(Node):
     def print_gps_logs(self, nmea):
         time = nmea["RMC"][0]
         status = nmea["RMC"][1]
-        latitude = nmea["RMC"][2]
-        longitude = nmea["RMC"][3]
+        latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        longitude = nmea["RMC"][4]
 
-        self.get_logger().info(f"""============= GPS data ============\n
-                                utc time : {time[:2] + ":" + time[2:4] + ":" + time[4:6]}\n
-                                status : {status}\n
-                                latitude : {latitude}\n
-                                longitude : {longitude}\n
-                                """)
+        self.get_logger().info(f"============= GPS data ============\n"
+                                f"utc time : {time[:2] + ":" + time[2:4] + ":" + time[4:6]}\n"
+                                f"status : {status}\n"
+                                f"latitude : {latitude}\n"
+                                f"longitude : {longitude}\n")
 
     
 

@@ -16,6 +16,39 @@ https://fr.wikipedia.org/wiki/NMEA_0183
 # ===============================================================================
 # all fields end with "\r\n" (CR-LF)
 
+
+
+GPRMC_FIELDS = [
+    "talker_sentence",      # $GPRMC
+    "utc_time",             # hhmmss.ss
+    "status",               # A=valid, V=invalid
+    "latitude",
+    "latitude_direction",   # N/S
+    "longitude",
+    "longitude_direction",  # E/W
+    "speed_over_ground",    # knots
+    "course_over_ground",   # degrees (relative to the true North)
+    "date",                 # ddmmyy
+    "magnetic_variation",   # E=east, W=west
+    "east_west_indicator",  # E=east
+    "mode",                 # N = not available only to NMEA version 2.3 and later
+    "checksum"              
+]
+
+GPVTG_FIELDS = [
+    "talker_sentence",      # $GPVTG
+    "course_true",          # degrees 
+    "reference",            # T = True = relative to the true North
+    "course_magnetic",      # degrees
+    "reference",            # M = Magnetic = relative to the magnetic North
+    "speed_knots",          # horizontal velocity
+    "units",                # N = Knots
+    "speed_kmh",            # horizontal velovity
+    "K",                    # K = km/h
+    "mode",                 # N = not available only to NMEA version 2.3 and later
+    "checksum"
+]
+
 # GPS precision ~15m
 # DGPS precision ~10m
 # Dead Reckoning Mode : estimate position using previous position and speed
@@ -35,18 +68,6 @@ GPGGA_FIELDS = [
     "geoid_units",          # m
     "age_of_diff_corr",     # seconds (null when DGPS is not used)
     "diff_ref_station_id",  # id 
-    "checksum"
-]
-
-GPGLL_FIELDS = [
-    "talker_sentence",      # $GPGLL
-    "latitude",
-    "latitude_direction",   # N/S
-    "longitude",
-    "longitude_direction",  # E/W
-    "utc_time",             # hhmmss.sss
-    "status",               # A=valid, V=invalid
-    "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"
 ]
 
@@ -87,40 +108,19 @@ GPGSV_FIELDS = [
     "checksum"
 ]
 
-GPMSS = [] # not available for this module
-
-GPRMC_FIELDS = [
-    "talker_sentence",      # $GPRMC
-    "utc_time",             # hhmmss.ss
-    "status",               # A=valid, V=invalid
+GPGLL_FIELDS = [
+    "talker_sentence",      # $GPGLL
     "latitude",
     "latitude_direction",   # N/S
     "longitude",
     "longitude_direction",  # E/W
-    "speed_over_ground",    # knots
-    "course_over_ground",   # degrees (relative to the true North)
-    "date",                 # ddmmyy
-    "magnetic_variation",   # E=east, W=west
-    "east_west_indicator",  # E=east
-    "mode",                 # N = not available only to NMEA version 2.3 and later
-    "checksum"              
-]
-
-GPVTG_FIELDS = [
-    "talker_sentence",      # $GPVTG
-    "course_true",          # degrees 
-    "reference",            # T = True = relative to the true North
-    "course_magnetic",      # degrees
-    "reference",            # M = Magnetic = relative to the magnetic North
-    "speed_knots",          # horizontal velocity
-    "units",                # N = Knots
-    "speed_kmh",            # horizontal velovity
-    "K",                    # K = km/h
+    "utc_time",             # hhmmss.sss
+    "status",               # A=valid, V=invalid
     "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"
 ]
 
-GPZDA = [] # not available for this module
+
 
 # ===============================================================================
 
@@ -151,18 +151,7 @@ class GPS(Node):
         data = None
 
         try:
-            if self.ser.in_waiting > 0:
-                self.buffer += self.ser.read(self.ser.in_waiting)
-                NMEA_starter = b'$GPRMC'
-                ubx_starter = b'\xb5b\x01\x03\x10\x00'
-
-                # Remove all data before RMC message
-                self.buffer = self.buffer[self.buffer.find(NMEA_starter):]
-
-                # extract data before the next ubx message
-                if ubx_starter in self.buffer:
-                    data = self.buffer[:self.buffer.find(ubx_starter)]
-                    self.buffer = self.buffer[self.buffer.find(ubx_starter):]
+            data = self.read_buffer()
                     
         except Exception as e:
             self.get_logger().error(f"Error reading GPS buffer: {e}")
@@ -173,26 +162,48 @@ class GPS(Node):
                 if not nmea:
                     self.get_logger().warn(f"Invalid NMEA sentence. {data}")
                 else:
-                    self.get_logger().info(f'GPS data decoded : {nmea}')
+                    self.get_logger().info(f'GPS data decoded !')
+                    self.print_gps_logs(nmea)
 
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 
+    def read_buffer(self):
+
+        if self.ser.in_waiting > 0:
+            self.buffer += self.ser.read(self.ser.in_waiting)
+            NMEA_starter = b'$GPRMC'
+            ubx_starter = b'\xb5b\x01\x03\x10\x00'
+
+            # Remove all data after the last ubx message
+            self.buffer = self.buffer[self.buffer.rfind(ubx_starter):]
+            
+            # extract the latest NMEA messages
+            if ubx_starter in self.buffer:
+                data = self.buffer[self.buffer.rfind(NMEA_starter):]
+                self.buffer = b'' # clear buffer
+
+        return data
         
     def parse_nmea_sentence(self, data):
-        dico = {"RMC":[], "VTG":[], "GGA":[], "GSA":[], "GSV":[], "GLL":[]}
+        nmea = {"RMC":[], "VTG":[], "GGA":[], "GSA":[], "GSV":[], "GLL":[]}
 
         messages = data.split("$GP")
         for message in messages:
             msg_id = message[:3]
-            msg_data = message[3:].split('*')[0] # remove checksum
+            msg_data = message[4:].split('*')[0] # remove checksum and first coma
 
             if msg_id == "GSV":
-                dico[msg_id].append(msg_data.split(","))
+                nmea[msg_id].append(msg_data.split(","))
             else:
-                dico[msg_id] = msg_data.split(",")
+                nmea[msg_id] = msg_data.split(",")
 
-        return dico
+        return nmea
+    
+
+    def print_gps_logs(self, nmea):
+        self.get_logger().info(f"GPS data : {nmea}")
+
     
 
 

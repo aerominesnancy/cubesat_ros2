@@ -79,7 +79,7 @@ GPGSV_FIELDS = [
     "checksum"
 ]
 
-GPMSS = [] # not present in the data sended (maybe a lecture error)
+GPMSS = [] # not available for this module
 
 GPRMC_FIELDS = [
     "talker_sentence",      # $GPRMC
@@ -112,6 +112,7 @@ GPVTG_FIELDS = [
     "checksum"
 ]
 
+GPZDA = [] # not available for this module
 
 # ===============================================================================
 
@@ -168,6 +169,7 @@ class GPS(Node):
         # Supprimer le checksum si présent
         sentence, checksum = sentence.split(b'*') if b'*' in sentence else sentence
 
+        self.get_logger().info(sentence)
         # Décoder en ASCII et split
         data = sentence.decode('ascii', errors='ignore').strip()
         parts = data.split(',')

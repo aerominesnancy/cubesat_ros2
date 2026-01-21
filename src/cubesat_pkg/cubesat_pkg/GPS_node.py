@@ -29,9 +29,7 @@ class GPS(Node):
             if not line:
                 self.get_logger().warn(f"No data received from GPS module.")
                 return
-            
-            self.get_logger().warn(f"received : {line}")
-            
+
             nmea = self.parse_nmea_sentence(line)
             if not nmea:
                 self.get_logger().warn(f"Invalid NMEA sentence. {line}")
@@ -49,6 +47,7 @@ class GPS(Node):
         avec type de message et champs.
         """
         sentence = sentence.decode('ascii', errors="ignore").strip()
+        self.get_logger().warn(f"received : {sentence}")
 
         # on recherche le début du message si il y a des caractères parasites avant
         start_index = sentence.find("$GP")

@@ -21,7 +21,9 @@ class GPS(Node):
             start = time.time()
 
             self.ser = serial.Serial('/dev/ttyAMA1', baudrate=baud, timeout=1)
+            self.get_logger().info(f'Connected to GPS module at {baud} baud.')
 
+            
             line = None
             while time.time() - start < 10:
                 line = self.ser.readline()
@@ -37,6 +39,7 @@ class GPS(Node):
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.get_logger().info('GPS node has been started.')
+
 
     def read_gps_data(self):
         try:

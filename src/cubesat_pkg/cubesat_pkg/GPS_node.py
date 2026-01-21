@@ -45,14 +45,18 @@ class GPS(Node):
         """
         Parse une phrase NMEA et retourne un dictionnaire
         avec type de message et champs.
-        Ex: $GPGGA,123519,4807.038,N,01131.000,E,...
         """
         sentence = sentence.decode('ascii', errors="ignore").strip()
-        if not sentence.startswith('$'):
-            return None
+
+        # on recherche le début du message si il y a des caractères parasites avant
+        parasite, data = sentence.split("$GP")
+        data = "$GP" + data
+
+        if parasite:
+            self.get_logger().warn(f"Parasite characters found in NMEA sentence : {parasite}")
 
         # Supprimer le checksum si présent
-        data, _ = sentence.split('*') if '*' in sentence else sentence
+        data, _ = data.split('*') if '*' in sentence else sentence
 
         # Décoder en ASCII et split
         parts = data.split(',')

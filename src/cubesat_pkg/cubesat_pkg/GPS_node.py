@@ -18,7 +18,7 @@ GPGGA_FIELDS = [
     "latitude_direction",   # N/S
     "longitude",
     "longitude_direction",  # E/W
-    "fix_quality",          # 0=invalid, 1=GPS, 2=DGPS, 6=Dead Recknoning Mode
+    "fix_quality",          # 0=invalid, 1=GPS, 2=DGPS, 6=Dead Recknoning Mode (not available in version < v2.3)
     "num_satellites",       # 1 to 12
     "hdop",                 # Horizontal Dilution of Precision
     "altitude",             # MSL Altitude (sea level altitud)
@@ -38,7 +38,7 @@ GPGLL_FIELDS = [
     "longitude_direction",  # E/W
     "utc_time",             # hhmmss.sss
     "status",               # A=valid, V=invalid
-    "mode",                 # A=Autonomous, D=DGPS, E=Dead Reckoning (Only present in NMEA v3.00)
+    "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"
 ]
 
@@ -94,7 +94,7 @@ GPRMC_FIELDS = [
     "date",                 # ddmmyy
     "magnetic_variation",   # E=east, W=west
     "east_west_indicator",  # E=east
-    "mode",                 # A=Autonomous, D=DGPS, E=DR
+    "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"              
 ]
 
@@ -108,7 +108,7 @@ GPVTG_FIELDS = [
     "units",                # N = Knots
     "speed_kmh",            # horizontal velovity
     "K",                    # K = km/h
-    "mode",                 # A=Autonomous, D=DGPS, E=DR
+    "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"
 ]
 
@@ -158,19 +158,20 @@ class GPS(Node):
         Parse une phrase NMEA et retourne un dictionnaire
         avec type de message et champs.
         """
-        # on recherche le début du message si il y a des caractères parasites avant
+        # remove nois before NMEA sentence
         start_index = sentence.find(b"$GP")
+        if start_index == -1:
+            return None
         parasite = sentence[:start_index]
         sentence = sentence[start_index:]
 
         if parasite:
             self.get_logger().warn(f"Parasite characters found before NMEA sentence : {parasite}")
 
-        # Supprimer le checksum si présent
-        sentence, checksum = sentence.split(b'*') if b'*' in sentence else sentence
+        # remove checksum
+        sentence, checksum = sentence.split(b'*')
 
-        self.get_logger().info(sentence)
-        # Décoder en ASCII et split
+        # Ddecode ascii and split data
         data = sentence.decode('ascii', errors='ignore').strip()
         parts = data.split(',')
         msg_type = parts[0][1:]  # enlever le $

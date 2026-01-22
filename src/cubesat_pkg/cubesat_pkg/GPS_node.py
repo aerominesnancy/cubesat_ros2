@@ -241,7 +241,7 @@ class GPS(Node):
 
         hh = int(time_str[0:2])
         mm = int(time_str[2:4])
-        ss = int(time_str[4:])
+        ss = int(time_str[4:6])
         sss = int((float(time_str[4:]) % 1) * 1e6)
 
         day = int(date_str[0:2])

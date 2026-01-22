@@ -146,7 +146,7 @@ class GPS(Node):
         self.nmea = None
 
         #timer and publisher
-        self.timer = self.create_timer(1.0, self.send_gps_data())
+        self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
         self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
         
         self.get_logger().info('GPS node has been started.')
@@ -154,10 +154,12 @@ class GPS(Node):
     
     def send_gps_data(self):
         self.nmea = self.read_gps_data()
-
+        if not self.nmea:
+            return
+        
         if self.nmea["RMC"][1] == "A":
             self.get_logger().info(f'GPS data decoded and valid.')
-    
+
             self.print_gps_data_for_user()
 
         else:
@@ -171,13 +173,11 @@ class GPS(Node):
 
         try:
             data = self.read_buffer()
-
             if not data:
                 self.get_logger().warn(f"Not enough data in buffer. No NMEA message available.")
                 return
-            
-            data = data.decode('utf-8')
-            
+            data = data.decode('utf-8') 
+
         except Exception as e:
             self.get_logger().error(f"Error reading GPS buffer: {e}")
             return
@@ -186,9 +186,9 @@ class GPS(Node):
             nmea = self.parse_nmea_sentence(data)
             if not nmea:
                 self.get_logger().warn(f"Invalid NMEA sentence. {data}")
-
+                return
             return nmea
-  
+        
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 

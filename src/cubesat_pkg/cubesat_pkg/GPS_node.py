@@ -6,7 +6,8 @@ from datetime import datetime, timezone # to convert UTC time to timestamp
 import time
 import serial
 """
-The module uses NEO-6M chip. It currently send RMC, VTG GGA, GSA, GSV(several times), GLL messages (in this order)
+The module uses NEO-6M chip. It currently send NMEA0183 messages : 
+RMC, VTG GGA, GSA, GSV(several times), GLL messages (in this order)
 and one binary message (certainly UBX) that is not decoded yet.
 
 explanations here :
@@ -244,25 +245,25 @@ class GPS(Node):
 
         status = nmea["RMC"][1]
 
-        latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        longitude = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        latitude = nmea["RMC"][2] 
+        lat_dir = nmea["RMC"][3]
+        longitude = nmea["RMC"][4]
+        long_dir = nmea["RMC"][5]
         latitude, longitude = self.convert_geolocalisation(latitude, longitude)
-
-        latitude2 = nmea["GGA"][1] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        longitude2 = nmea["GGA"][3]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        latitude2, longitude2 = self.convert_geolocalisation(latitude2, longitude2)
         h_precision = nmea["GSA"][15]
+        h_precision = '?' if h_precision=='1.0' else h_precision
 
         altitude = nmea["GGA"][8] # école des Mines ~250m
         v_precision = nmea["GSA"][16]
         v_precision = '?' if v_precision=='1.0' else v_precision
-        h_precision = '?' if h_precision=='1.0' else h_precision
+        # Precisions are DOP (Dilution of Precision)
+        # to obtain the precision in meters, multiply by the HDOP/VDOP by the precision of the GPS receiver
+        
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
             f"status : {status}\n"
-            f"RMC latitude : {latitude}\t\tlongitude : {longitude} \t\t (precision: {h_precision})\n"
-            f"GSA latitude : {latitude2}\t\tlongitude : {longitude2} \t\t (precision: {h_precision})\n"
+            f"latitude : {latitude}{lat_dir}\t\tlongitude : {longitude}{long_dir} \t\t (precision: {h_precision})\n"
             f"altitude : {altitude} (precision: {v_precision})"
             )
         

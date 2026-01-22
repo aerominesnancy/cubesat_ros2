@@ -236,8 +236,9 @@ class GPS(Node):
         if time and date:
             timestamp = self.extract_timestamp(nmea)
 
-        num_sat = nmea["GSV"][2]
+        num_sat = nmea["GSV"][0][2]
         fix_quality = ["invalid", "basic GPS", "DGPS"][int(nmea["GGA"][5])]
+        fix_type = ['no fix', '2D fix', '3D fix'][int(nmea["GSA"][1])]
 
         latitude = nmea["RMC"][2] 
         lat_dir = nmea["RMC"][3]
@@ -260,7 +261,7 @@ class GPS(Node):
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
-            f"number of satellites : {num_sat}\t\t fix quality : {fix_quality}\n"
+            f"number of satellites : {num_sat}\t\t fix quality : {fix_quality}\t\t fix type : {fix_type}\n"
             f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (precision: {h_precision})\n"
             f"altitude : {altitude}MSL (precision: {v_precision})\n"
             f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"

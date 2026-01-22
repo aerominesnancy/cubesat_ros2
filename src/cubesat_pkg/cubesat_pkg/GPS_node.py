@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
 
+from datetime import datetime, timezone # to convert UTC time to timestamp
 import time
 import serial
 """
@@ -143,21 +144,6 @@ class GPS(Node):
 
         self.get_logger().info('GPS node has been started.')
         
-        self.update_timestamp()
-
-    def update_timestamp(self):
-
-        utc_time = ''
-        while utc_time == '':
-            data = self.read_gps_data()
-            if data:
-                utc_time = data["RMC"][0]
-                print(utc_time, flush=True)
-            time.sleep(1)
-        
-        timestamp = 3600*time[:2] + 60*time[2:4] + time[4:6]
-        self.get_logger().info(f"timestamp has been updated : {timestamp}")
-
 
     def read_gps_data(self):
         """
@@ -228,14 +214,38 @@ class GPS(Node):
         date = nmea["RMC"][8]
         status = nmea["RMC"][1]
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        longitude = nmea["RMC"][4]
+        longitude = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         self.get_logger().info(f"============= GPS data ============\n"
-            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date}\n"
+            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date} \t timestamp : {self.extract_timestamp(nmea)}\n"
             f"status : {status}\n"
             f"latitude : {latitude}\n"
             f"longitude : {longitude}\n"
             )
+    
+    def extract_timestamp(self, nmea):
+        time_str = nmea[1]
+        date_str = nmea[9]
+
+        if not time_str or not date_str:
+            return None
+
+        hh = int(time_str[0:2])
+        mm = int(time_str[2:4])
+        ss = float(time_str[4:])
+
+        day = int(date_str[0:2])
+        month = int(date_str[2:4])
+        year = 2000 + int(date_str[4:6])
+
+        dt = datetime(
+            year, month, day,
+            hh, mm, int(ss),
+            int((ss % 1) * 1e6),
+            tzinfo=timezone.utc
+        )
+
+        return dt.timestamp()
 
     
 

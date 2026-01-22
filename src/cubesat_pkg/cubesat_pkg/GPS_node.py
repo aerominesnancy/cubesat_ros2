@@ -42,9 +42,9 @@ GPVTG_FIELDS = [
     "course_magnetic",      # degrees
     "reference",            # M = Magnetic = relative to the magnetic North
     "speed_knots",          # horizontal velocity
-    "units",                # N = Knots
+    "unit",                 # N = Knots
     "speed_kmh",            # horizontal velovity
-    "K",                    # K = km/h
+    "unit",                 # K = km/h
     "mode",                 # N = not available only to NMEA version 2.3 and later
     "checksum"
 ]
@@ -243,7 +243,8 @@ class GPS(Node):
         if time and date:
             timestamp = self.extract_timestamp(nmea)
 
-        status = nmea["RMC"][1]
+        num_sat = nmea["GSA"][6]
+        fix_quality = ["invalid", "basic GPS", "DGPS"][nmea["GGA"][5]]
 
         latitude = nmea["RMC"][2] 
         lat_dir = nmea["RMC"][3]
@@ -259,12 +260,15 @@ class GPS(Node):
         # Precisions are DOP (Dilution of Precision)
         # to obtain the precision in meters, multiply by the HDOP/VDOP by the precision of the GPS receiver
         
+        course_angle = nmea["VTG"][0]
+        speed = nmea["VTG"][6]
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
-            f"status : {status}\n"
-            f"latitude : {latitude}{lat_dir}\t\tlongitude : {longitude}{long_dir} \t\t (precision: {h_precision})\n"
-            f"altitude : {altitude} (precision: {v_precision})"
+            f"number of satellites : {num_sat}\t\t fix quality : {fix_quality}\n"
+            f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (precision: {h_precision})\n"
+            f"altitude : {altitude}MSL (precision: {v_precision})\n"
+            f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"
             )
         
     def convert_geolocalisation(self, latitude, longitude):

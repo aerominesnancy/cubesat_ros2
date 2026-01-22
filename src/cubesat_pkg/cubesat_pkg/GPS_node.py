@@ -152,6 +152,7 @@ class GPS(Node):
             data = self.read_gps_data()
             if data:
                 utc_time = data["RMC"][0]
+            time.sleep(1)
         
         timestamp = 3600*time[:2] + 60*time[2:4] + time[4:6]
         self.get_logger().info(f"timestamp has been updated : {timestamp}")

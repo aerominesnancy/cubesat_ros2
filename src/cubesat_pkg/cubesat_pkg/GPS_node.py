@@ -253,8 +253,10 @@ class GPS(Node):
         latitude2, longitude2 = self.convert_geolocalisation(latitude2, longitude2)
         h_precision = nmea["GSA"][15]
 
-        altitude = nmea["GGA"][8]
+        altitude = nmea["GGA"][8] # école des Mines ~250m
         v_precision = nmea["GSA"][16]
+        v_precision = '?' if v_precision=='1.0' else v_precision
+        h_precision = '?' if h_precision=='1.0' else h_precision
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"

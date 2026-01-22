@@ -133,7 +133,7 @@ class GPS(Node):
                                     + f" Current value : {callback_delay_second}")
             self.get_logger().warn("GPS node is shutting down...")
             self.is_valid = False
-            
+
         else:
             # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
             # ttyAMA* index can change depending on the number of serial port on the raspberry pi
@@ -183,13 +183,11 @@ class GPS(Node):
         
         try:
             nmea = self.parse_nmea_sentence(data)
-            if not nmea:
-                self.get_logger().warn(f"Invalid NMEA sentence. {data}")
-                return
             return nmea
         
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
+            return
 
 
     def read_buffer(self, NMEA_starter = b'$GPRMC', ubx_starter = b'\xb5b\x01\x03\x10\x00'):
@@ -310,8 +308,9 @@ def main(args=None):
             rclpy.spin(gps_node)
 
     except KeyboardInterrupt:
-        gps_node.get_logger().warn('GPS node interrupted and is shutting down...')
-
+        #gps_node.get_logger().warn('GPS node interrupted and is shutting down...')
+        pass
+    
     finally:
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent

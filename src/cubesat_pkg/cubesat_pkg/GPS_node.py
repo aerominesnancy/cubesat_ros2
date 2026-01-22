@@ -20,7 +20,6 @@ https://fr.wikipedia.org/wiki/NMEA_0183
 
 
 GPRMC_FIELDS = [
-    "talker_sentence",      # $GPRMC
     "utc_time",             # hhmmss.ss
     "status",               # A=valid, V=invalid
     "latitude",             # ddmm.mmmmm
@@ -37,7 +36,6 @@ GPRMC_FIELDS = [
 ]
 
 GPVTG_FIELDS = [
-    "talker_sentence",      # $GPVTG
     "course_true",          # degrees 
     "reference",            # T = True = relative to the true North
     "course_magnetic",      # degrees
@@ -54,7 +52,6 @@ GPVTG_FIELDS = [
 # DGPS precision ~10m
 # Dead Reckoning Mode : estimate position using previous position and speed
 GPGGA_FIELDS = [
-    "talker_sentence",      # $GPGGA
     "utc_time",             # hhmmss.sss
     "latitude",             
     "latitude_direction",   # N/S
@@ -73,7 +70,6 @@ GPGGA_FIELDS = [
 ]
 
 GPGSA_FIELDS = [
-    "talker_sentence",      # $GPGSA
     "mode",                 # 2D/3D mode switching : M=manual, A=auto 
     "fix_type",             # 1=no fix, 2=2D  (< 4 satellites), 3=3D (> 3 satellites)
     "satellite_1",
@@ -95,7 +91,6 @@ GPGSA_FIELDS = [
 ]
 
 GPGSV_FIELDS = [
-    "talker_sentence",      # $GPGSV
     "number_of_messages",   # 1 to 3
     "message_number",
     "satellites_in_view",  
@@ -110,7 +105,6 @@ GPGSV_FIELDS = [
 ]
 
 GPGLL_FIELDS = [
-    "talker_sentence",      # $GPGLL
     "latitude",
     "latitude_direction",   # N/S
     "longitude",
@@ -162,9 +156,15 @@ class GPS(Node):
                 nmea = self.parse_nmea_sentence(data.decode('utf-8'))
                 if not nmea:
                     self.get_logger().warn(f"Invalid NMEA sentence. {data}")
-                else:
-                    self.get_logger().info(f'GPS data decoded !')
+
+                elif nmea["RMC"][1] == "A":
+                    self.get_logger().info(f'GPS data decoded and valid.')
                     self.print_gps_logs(nmea)
+                else:
+                    self.get_logger().info(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
+
+            else:
+                self.get_logger().warn(f"Not enough data in buffer. No NMEA message available.")
 
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
@@ -212,13 +212,15 @@ class GPS(Node):
     def print_gps_logs(self, nmea):
         time = nmea["RMC"][0]
         date = nmea["RMC"][8]
-        timestamp = self.extract_timestamp(nmea)
+        if time and date:
+            timestamp = self.extract_timestamp(nmea)
 
         status = nmea["RMC"][1]
 
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        latitude, longitude = self.convert_geolocalisation(latitude, longitude)
+        if latitude and longitude:
+            latitude, longitude = self.convert_geolocalisation(latitude, longitude)
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date} \t\t timestamp : {timestamp}\n"
@@ -228,8 +230,8 @@ class GPS(Node):
             )
         
     def convert_geolocalisation(self, latitude, longitude):
-        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{float(latitude[2:]) % 1 * 60}''" ,
-                f"{int(longitude[:3])}°{int(longitude[3:5])}'{float(longitude[3:]) % 1 * 60}''")
+        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}''" ,
+                f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}''")
 
 
     def extract_timestamp(self, nmea):

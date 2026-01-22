@@ -244,7 +244,7 @@ class GPS(Node):
             timestamp = self.extract_timestamp(nmea)
 
         num_sat = nmea["GSA"][6]
-        fix_quality = ["invalid", "basic GPS", "DGPS"][nmea["GGA"][5]]
+        fix_quality = ["invalid", "basic GPS", "DGPS"][int(nmea["GGA"][5])]
 
         latitude = nmea["RMC"][2] 
         lat_dir = nmea["RMC"][3]

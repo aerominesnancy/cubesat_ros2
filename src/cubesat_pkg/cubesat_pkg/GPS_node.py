@@ -142,15 +142,28 @@ class GPS(Node):
         self.timer = self.create_timer(1.0, self.read_gps_data)
 
         self.get_logger().info('GPS node has been started.')
+        
+        self.update_timestamp()
+
+    def update_timestamp(self):
+
+        utc_time = ''
+        while utc_time == '':
+            data = self.read_gps_data()
+            if data:
+                utc_time = data["RMC"][0]
+        
+        timestamp = 3600*time[:2] + 60*time[2:4] + time[4:6]
+        self.get_logger().info(f"timestamp has been updated : {timestamp}")
 
 
     def read_gps_data(self):
         """
         messages order : RMC, VTG, GGA, GSA, GSV(several times), GLL, ubx binary
         """
-        data = None
 
         try:
+            data = None
             data = self.read_buffer()
                     
         except Exception as e:
@@ -210,15 +223,17 @@ class GPS(Node):
 
     def print_gps_logs(self, nmea):
         time = nmea["RMC"][0]
+        date = nmea["RMS"][8]
         status = nmea["RMC"][1]
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude = nmea["RMC"][4]
 
         self.get_logger().info(f"============= GPS data ============\n"
-                                f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\n"
-                                f"status : {status}\n"
-                                f"latitude : {latitude}\n"
-                                f"longitude : {longitude}\n")
+            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date}\n"
+            f"status : {status}\n"
+            f"latitude : {latitude}\n"
+            f"longitude : {longitude}\n"
+            )
 
     
 

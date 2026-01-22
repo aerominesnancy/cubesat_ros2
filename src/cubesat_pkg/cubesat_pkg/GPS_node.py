@@ -253,7 +253,7 @@ class GPS(Node):
         latitude2, longitude2 = self.convert_geolocalisation(latitude2, longitude2)
         h_precision = nmea["GSA"][15]
 
-        altitude = nmea["GSA"][8]
+        altitude = nmea["GGA"][8]
         v_precision = nmea["GSA"][16]
 
         self.get_logger().info(f"============= GPS data ============\n"

@@ -228,7 +228,7 @@ class GPS(Node):
             latitude, longitude = self.convert_geolocalisation(latitude, longitude)
 
         self.get_logger().info(f"============= GPS data ============\n"
-            f"ATOMIC CLOCKS : \t utc : {time[:2]}:{time[2:4]}:{time[4:6]}\tdate : {date}\ttimestamp : {timestamp}\n"
+            f"ATOMIC CLOCKS : \t utc:{time[:2]}:{time[2:4]}:{time[4:6]}\t date:{date}\t timestamp:{timestamp}\n"
             f"status : {status}\n"
             f"latitude : {latitude}\n"
             f"longitude : {longitude}\n"

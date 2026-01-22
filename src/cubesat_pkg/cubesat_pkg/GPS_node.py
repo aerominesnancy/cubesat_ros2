@@ -164,7 +164,7 @@ class GPS(Node):
                     self.get_logger().warn(f"Invalid NMEA sentence. {data}")
                 else:
                     self.get_logger().info(f'GPS data decoded !')
-                    #self.print_gps_logs(nmea)
+                    self.print_gps_logs(nmea)
 
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
@@ -224,8 +224,8 @@ class GPS(Node):
             )
     
     def extract_timestamp(self, nmea):
-        time_str = nmea[1]
-        date_str = nmea[9]
+        time_str = nmea["RMC"][0]
+        date_str = nmea["RMC"][8]
 
         if not time_str or not date_str:
             return None

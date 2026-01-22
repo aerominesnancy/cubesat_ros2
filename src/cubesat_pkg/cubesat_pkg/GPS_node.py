@@ -168,26 +168,30 @@ class GPS(Node):
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 
+
     def read_buffer(self):
 
-        if self.ser.in_waiting > 0:
-            self.buffer += self.ser.read(self.ser.in_waiting)
-            NMEA_starter = b'$GPRMC'
-            ubx_starter = b'\xb5b\x01\x03\x10\x00'
+        if self.ser.in_waiting == 0:
+            return
+        
+        self.buffer += self.ser.read(self.ser.in_waiting)
+        NMEA_starter = b'$GPRMC'
+        ubx_starter = b'\xb5b\x01\x03\x10\x00'
 
-            # Remove all data after the last ubx message
-            self.buffer = self.buffer[self.buffer.rfind(ubx_starter):]
-            
-            # extract the latest NMEA messages
-            if not NMEA_starter in self.buffer:
-                self.buffer = b'' # clear buffer
-                return
-
-            data = self.buffer[self.buffer.rfind(NMEA_starter):]
+        # Remove all data after the last ubx message
+        self.buffer = self.buffer[self.buffer.rfind(ubx_starter):]
+        
+        # extract the latest NMEA messages
+        if not NMEA_starter in self.buffer:
             self.buffer = b'' # clear buffer
+            return
+
+        data = self.buffer[self.buffer.rfind(NMEA_starter):]
+        self.buffer = b'' # clear buffer
 
         return data
-        
+
+
     def parse_nmea_sentence(self, data):
         nmea = {"RMC":[], "VTG":[], "GGA":[], "GSA":[], "GSV":[], "GLL":[]}
 

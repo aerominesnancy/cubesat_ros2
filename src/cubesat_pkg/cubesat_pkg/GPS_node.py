@@ -146,7 +146,7 @@ class GPS(Node):
 
             #timer and publisher
             self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
-            self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
+            self.timer = self.create_timer(callback_delay_second, self.send_gps_data)
 
             self.get_logger().info('GPS node has been started.')
 
@@ -308,9 +308,8 @@ def main(args=None):
             rclpy.spin(gps_node)
 
     except KeyboardInterrupt:
-        #gps_node.get_logger().warn('GPS node interrupted and is shutting down...')
-        pass
-    
+        gps_node.get_logger().warn('GPS node interrupted and is shutting down...')
+
     finally:
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent

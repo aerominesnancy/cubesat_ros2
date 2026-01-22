@@ -228,8 +228,8 @@ class GPS(Node):
             )
         
     def convert_geolocalisation(self, latitude, longitude):
-        return (f"{latitude[:2]}°{int(latitude[2:])}'{latitude[2:] % 1 * 60}''" ,
-                f"{longitude[:3]}°{int(longitude[3:])}'{longitude[3:] % 1 * 60}''")
+        return (f"{latitude[:2]}°{latitude[2:4]}'{int(float(latitude[2:]) % 1 * 60)}''" ,
+                f"{longitude[:3]}°{longitude[3:5]}'{int(float(longitude[3:]) % 1 * 60)}''")
 
 
     def extract_timestamp(self, nmea):

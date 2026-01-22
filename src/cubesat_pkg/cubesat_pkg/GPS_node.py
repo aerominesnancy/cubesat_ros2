@@ -125,20 +125,45 @@ class GPS(Node):
         super().__init__('gps_node')
         self.is_valid = True
 
-        self.publisher_ = self.create_publisher(NavSatFix, 'gps_data', 10)
+        # Récupération des paramètres
+        callback_delay_second = self.declare_parameter('callback_delay_second', -1.0).value
+        
+        if callback_delay_second == -1:
+            self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
+                                    + f" Current value : {callback_delay_second}")
+            self.get_logger().warn("IMU node is shutting down...")
+            self.is_valid = False
+
+        
 
         # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
         # ttyAMA* index can change depending on the number of serial port on the raspberry pi
-
         # GPS module use baud=38400 by default
         self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
+
+        # variables
         self.buffer = b'' # create a buffer to work on data
+        self.nmea = None
 
-        self.timer = self.create_timer(1.0, self.read_gps_data)
-
-        self.get_logger().info('GPS node has been started.')
+        #timer and publisher
+        self.timer = self.create_timer(1.0, self.send_gps_data())
+        self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
         
+        self.get_logger().info('GPS node has been started.')
 
+    
+    def send_gps_data(self):
+        self.nmea = self.read_gps_data()
+
+        if self.nmea["RMC"][1] == "A":
+            self.get_logger().info(f'GPS data decoded and valid.')
+    
+            self.print_gps_data_for_user()
+
+        else:
+            self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
+              
+        
     def read_gps_data(self):
         """
         messages order : RMC, VTG, GGA, GSA, GSV(several times), GLL, ubx binary
@@ -150,22 +175,20 @@ class GPS(Node):
             if not data:
                 self.get_logger().warn(f"Not enough data in buffer. No NMEA message available.")
                 return
-                    
+            
+            data = data.decode('utf-8')
+            
         except Exception as e:
             self.get_logger().error(f"Error reading GPS buffer: {e}")
             return
         
         try:
-            nmea = self.parse_nmea_sentence(data.decode('utf-8'))
+            nmea = self.parse_nmea_sentence(data)
             if not nmea:
                 self.get_logger().warn(f"Invalid NMEA sentence. {data}")
 
-            elif nmea["RMC"][1] == "A":
-                self.get_logger().info(f'GPS data decoded and valid.')
-                self.print_gps_logs(nmea)
-            else:
-                self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
-                
+            return nmea
+  
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 
@@ -214,7 +237,9 @@ class GPS(Node):
         return nmea
     
 
-    def print_gps_logs(self, nmea):
+    def print_gps_data_for_user(self):
+        nmea = self.nmea
+
         time = nmea["RMC"][0]
         date = nmea["RMC"][8]
         if time and date:
@@ -224,14 +249,22 @@ class GPS(Node):
 
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if latitude and longitude:
-            latitude, longitude = self.convert_geolocalisation(latitude, longitude)
+        latitude, longitude = self.convert_geolocalisation(latitude, longitude)
+
+        latitude2 = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        longitude2 = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        latitude2, longitude2 = self.convert_geolocalisation(latitude2, longitude2)
+        h_precision = nmea["GGA"][15]
+
+        altitude = nmea["GGA"][8]
+        v_precision = nmea["GGA"][16]
 
         self.get_logger().info(f"============= GPS data ============\n"
-            f"ATOMIC CLOCKS : \t utc:{time[:2]}:{time[2:4]}:{time[4:6]}\t date:{date}\t timestamp:{timestamp}\n"
+            f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
             f"status : {status}\n"
-            f"latitude : {latitude}\n"
-            f"longitude : {longitude}\n"
+            f"RMC latitude : {latitude}\t\tlongitude : {longitude} \t\t (precision: {h_precision})\n"
+            f"GGA latitude : {latitude2}\t\tlongitude : {longitude2} \t\t (precision: {h_precision})\n"
+            f"altitude : {altitude} (precision: {v_precision})"
             )
         
     def convert_geolocalisation(self, latitude, longitude):

@@ -131,26 +131,24 @@ class GPS(Node):
         if callback_delay_second == -1:
             self.get_logger().error("Parameter 'callback_delay_second' must be set to a positive float."
                                     + f" Current value : {callback_delay_second}")
-            self.get_logger().warn("IMU node is shutting down...")
+            self.get_logger().warn("GPS node is shutting down...")
             self.is_valid = False
-            return
+            
+        else:
+            # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
+            # ttyAMA* index can change depending on the number of serial port on the raspberry pi
+            # GPS module use baud=38400 by default
+            self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
 
-        
+            # variables
+            self.buffer = b'' # create a buffer to work on data
+            self.nmea = None
 
-        # uart2 are GPIO (for raspberry pi 4) 12 (TX) and 13 (RX)
-        # ttyAMA* index can change depending on the number of serial port on the raspberry pi
-        # GPS module use baud=38400 by default
-        self.ser = serial.Serial('/dev/ttyAMA1', baudrate=38400, timeout=1)
+            #timer and publisher
+            self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
+            self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
 
-        # variables
-        self.buffer = b'' # create a buffer to work on data
-        self.nmea = None
-
-        #timer and publisher
-        self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
-        self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
-
-        self.get_logger().info('GPS node has been started.')
+            self.get_logger().info('GPS node has been started.')
 
     
     def send_gps_data(self):

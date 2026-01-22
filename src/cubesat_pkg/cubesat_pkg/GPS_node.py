@@ -266,6 +266,8 @@ class GPS(Node):
             f"altitude : {altitude}MSL (precision: {v_precision})\n"
             f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"
             )
+        for i in range(2,14):
+            print(nmea["GSA"][i])
         
     def convert_geolocalisation(self, latitude, longitude):
         return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}''" ,

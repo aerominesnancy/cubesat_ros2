@@ -152,8 +152,8 @@ class GPS(Node):
         
         if self.nmea["RMC"][1] == "A":
             self.get_logger().info(f'GPS data decoded and valid.')
-
             self.print_gps_data_for_user()
+            self.get_logger().info("No publication on ros2 topic for the moment".upper())
 
         else:
             self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')

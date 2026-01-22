@@ -145,50 +145,55 @@ class GPS(Node):
         """
 
         try:
-            data = None
             data = self.read_buffer()
+
+            if not data:
+                self.get_logger().warn(f"Not enough data in buffer. No NMEA message available.")
+                return
                     
         except Exception as e:
             self.get_logger().error(f"Error reading GPS buffer: {e}")
+            return
         
         try:
-            if data:
-                nmea = self.parse_nmea_sentence(data.decode('utf-8'))
-                if not nmea:
-                    self.get_logger().warn(f"Invalid NMEA sentence. {data}")
+            nmea = self.parse_nmea_sentence(data.decode('utf-8'))
+            if not nmea:
+                self.get_logger().warn(f"Invalid NMEA sentence. {data}")
 
-                elif nmea["RMC"][1] == "A":
-                    self.get_logger().info(f'GPS data decoded and valid.')
-                    self.print_gps_logs(nmea)
-                else:
-                    self.get_logger().info(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
-
+            elif nmea["RMC"][1] == "A":
+                self.get_logger().info(f'GPS data decoded and valid.')
+                self.print_gps_logs(nmea)
             else:
-                self.get_logger().warn(f"Not enough data in buffer. No NMEA message available.")
-
+                self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
+                
         except Exception as e:
             self.get_logger().error(f"Error parsing NMEA sentence: {e}")
 
 
-    def read_buffer(self):
+    def read_buffer(self, NMEA_starter = b'$GPRMC', ubx_starter = b'\xb5b\x01\x03\x10\x00'):
+        """Reads the serial buffer and returns the latest NMEA message."""
 
+        # read gps buffer if available
         if self.ser.in_waiting == 0:
             return
-        
         self.buffer += self.ser.read(self.ser.in_waiting)
-        NMEA_starter = b'$GPRMC'
-        ubx_starter = b'\xb5b\x01\x03\x10\x00'
-
-        # Remove all data after the last ubx message
-        self.buffer = self.buffer[self.buffer.rfind(ubx_starter):]
         
-        # extract the latest NMEA messages
-        if not NMEA_starter in self.buffer:
-            self.buffer = b'' # clear buffer
+        # find the last ender
+        end_index = self.buffer.rfind(ubx_starter)
+        if end_index == -1:
+            # no ender found, wait until the next reading
+            return
+        
+        # find the last starter before this ender
+        start_index = self.buffer[:end_index].rfind(NMEA_starter)
+        if start_index == -1:
+            # no starter found, clear buffer before the ender
+            self.buffer = self.buffer[end_index:]
             return
 
-        data = self.buffer[self.buffer.rfind(NMEA_starter):]
-        self.buffer = b'' # clear buffer
+        # extract data and remove it from the buffer
+        data = self.buffer[start_index:end_index]
+        self.buffer = self.buffer[end_index:] # clear buffer
 
         return data
 
@@ -223,7 +228,7 @@ class GPS(Node):
             latitude, longitude = self.convert_geolocalisation(latitude, longitude)
 
         self.get_logger().info(f"============= GPS data ============\n"
-            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date} \t\t timestamp : {timestamp}\n"
+            f"ATOMIC CLOCKS : \t utc : {time[:2]}:{time[2:4]}:{time[4:6]}\tdate : {date}\ttimestamp : {timestamp}\n"
             f"status : {status}\n"
             f"latitude : {latitude}\n"
             f"longitude : {longitude}\n"
@@ -256,7 +261,7 @@ class GPS(Node):
             tzinfo=timezone.utc
         )
 
-        return dt.timestamp()
+        return round(dt.timestamp(),2)
 
     
 

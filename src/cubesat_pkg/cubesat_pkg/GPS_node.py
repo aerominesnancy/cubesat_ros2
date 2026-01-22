@@ -251,16 +251,16 @@ class GPS(Node):
         latitude2 = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude2 = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         latitude2, longitude2 = self.convert_geolocalisation(latitude2, longitude2)
-        h_precision = nmea["GGA"][15]
+        h_precision = nmea["GSA"][15]
 
-        altitude = nmea["GGA"][8]
-        v_precision = nmea["GGA"][16]
+        altitude = nmea["GSA"][8]
+        v_precision = nmea["GSA"][16]
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
             f"status : {status}\n"
             f"RMC latitude : {latitude}\t\tlongitude : {longitude} \t\t (precision: {h_precision})\n"
-            f"GGA latitude : {latitude2}\t\tlongitude : {longitude2} \t\t (precision: {h_precision})\n"
+            f"GSA latitude : {latitude2}\t\tlongitude : {longitude2} \t\t (precision: {h_precision})\n"
             f"altitude : {altitude} (precision: {v_precision})"
             )
         

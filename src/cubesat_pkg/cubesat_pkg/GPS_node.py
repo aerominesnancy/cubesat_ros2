@@ -224,7 +224,7 @@ class GPS(Node):
 
     def print_gps_logs(self, nmea):
         time = nmea["RMC"][0]
-        date = nmea["RMS"][8]
+        date = nmea["RMC"][8]
         status = nmea["RMC"][1]
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude = nmea["RMC"][4]

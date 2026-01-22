@@ -236,7 +236,11 @@ class GPS(Node):
         if time and date:
             timestamp = self.extract_timestamp(nmea)
 
-        num_sat = nmea["GSV"][0][2]
+
+        num_sat = 0
+        for i in range(2,14):
+            if nmea["GSA"][i]:
+                num_sat += 1
         fix_quality = {0:'invalid', 1:'GPS', 2:'DGPS', 6:"estimated"}[int(nmea["GGA"][5])]
         fix_type = {1:'no fix', 2:'2D fix', 3:'3D fix'}[int(nmea["GSA"][1])]
 
@@ -266,8 +270,7 @@ class GPS(Node):
             f"altitude : {altitude}MSL (precision: {v_precision})\n"
             f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"
             )
-        for i in range(2,14):
-            print(nmea["GSA"][i])
+        
         
     def convert_geolocalisation(self, latitude, longitude):
         return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}''" ,

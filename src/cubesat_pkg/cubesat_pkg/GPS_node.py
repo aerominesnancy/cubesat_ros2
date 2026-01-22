@@ -23,9 +23,9 @@ GPRMC_FIELDS = [
     "talker_sentence",      # $GPRMC
     "utc_time",             # hhmmss.ss
     "status",               # A=valid, V=invalid
-    "latitude",
+    "latitude",             # ddmm.mmmmm
     "latitude_direction",   # N/S
-    "longitude",
+    "longitude",            # dddmm.mmmmm
     "longitude_direction",  # E/W
     "speed_over_ground",    # knots
     "course_over_ground",   # degrees (relative to the true North)
@@ -212,17 +212,26 @@ class GPS(Node):
     def print_gps_logs(self, nmea):
         time = nmea["RMC"][0]
         date = nmea["RMC"][8]
+        timestamp = self.extract_timestamp(nmea)
+
         status = nmea["RMC"][1]
+
         latitude = nmea["RMC"][2] # attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         longitude = nmea["RMC"][4]# attention au signe !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        latitude, longitude = self.convert_geolocalisation(latitude, longitude)
 
         self.get_logger().info(f"============= GPS data ============\n"
-            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date} \t timestamp : {self.extract_timestamp(nmea)}\n"
+            f"utc time : {time[:2]}:{time[2:4]}:{time[4:6]}\t date : {date} \t\t timestamp : {timestamp}\n"
             f"status : {status}\n"
             f"latitude : {latitude}\n"
             f"longitude : {longitude}\n"
             )
-    
+        
+    def convert_geolocalisation(self, latitude, longitude):
+        return (f"{latitude[:2]}°{int(latitude[2:])}'{latitude[2:] % 1 * 60}''" ,
+                f"{longitude[:3]}°{int(longitude[3:])}'{longitude[3:] % 1 * 60}''")
+
+
     def extract_timestamp(self, nmea):
         time_str = nmea["RMC"][0]
         date_str = nmea["RMC"][8]
@@ -232,7 +241,8 @@ class GPS(Node):
 
         hh = int(time_str[0:2])
         mm = int(time_str[2:4])
-        ss = float(time_str[4:])
+        ss = int(time_str[4:])
+        sss = int((time_str[4:] % 1) * 1e6)
 
         day = int(date_str[0:2])
         month = int(date_str[2:4])
@@ -240,8 +250,7 @@ class GPS(Node):
 
         dt = datetime(
             year, month, day,
-            hh, mm, int(ss),
-            int((ss % 1) * 1e6),
+            hh, mm, ss, sss,
             tzinfo=timezone.utc
         )
 

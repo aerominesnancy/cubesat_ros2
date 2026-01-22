@@ -32,8 +32,7 @@ GPRMC_FIELDS = [
     "date",                 # ddmmyy
     "magnetic_variation",   # E=east, W=west
     "east_west_indicator",  # E=east
-    "mode",                 # N = not available only to NMEA version 2.3 and later
-    "checksum"              
+    "mode"                  # N = not available only to NMEA version 2.3 and later             
 ]
 
 GPVTG_FIELDS = [
@@ -45,8 +44,7 @@ GPVTG_FIELDS = [
     "unit",                 # N = Knots
     "speed_kmh",            # horizontal velovity
     "unit",                 # K = km/h
-    "mode",                 # N = not available only to NMEA version 2.3 and later
-    "checksum"
+    "mode"                  # N = not available only to NMEA version 2.3 and later
 ]
 
 # GPS precision ~15m
@@ -66,8 +64,7 @@ GPGGA_FIELDS = [
     "geoid_separation",     # Ellipsoid altitude = MSL Altitude + Geoid Separation
     "geoid_units",          # m
     "age_of_diff_corr",     # seconds (null when DGPS is not used)
-    "diff_ref_station_id",  # id 
-    "checksum"
+    "diff_ref_station_id"   # id 
 ]
 
 GPGSA_FIELDS = [
@@ -87,8 +84,7 @@ GPGSA_FIELDS = [
     "satellite_12",
     "pdop",                 # Position Dilution of Precision
     "hdop",                 # Horizontal Dilution of Precision
-    "vdop",                 # Vertical Dilution of Precision
-    "checksum"
+    "vdop"                  # Vertical Dilution of Precision
 ]
 
 GPGSV_FIELDS = [
@@ -100,9 +96,7 @@ GPGSV_FIELDS = [
     "sat_id",               # 1 to 32
     "sat_elevation",        # 0 to 90 degrees
     "sat_azimuth",          # 0 to 359 degrees (relative to true north)
-    "sat_snr",              # 0 to 99 dBHz (null when not tracking)
-
-    "checksum"
+    "sat_snr"               # 0 to 99 dBHz (null when not tracking)
 ]
 
 GPGLL_FIELDS = [
@@ -112,8 +106,7 @@ GPGLL_FIELDS = [
     "longitude_direction",  # E/W
     "utc_time",             # hhmmss.sss
     "status",               # A=valid, V=invalid
-    "mode",                 # N = not available only to NMEA version 2.3 and later
-    "checksum"
+    "mode"                  # N = not available only to NMEA version 2.3 and later
 ]
 
 
@@ -243,7 +236,7 @@ class GPS(Node):
         if time and date:
             timestamp = self.extract_timestamp(nmea)
 
-        num_sat = nmea["GSA"][6]
+        num_sat = nmea["GSV"][2]
         fix_quality = ["invalid", "basic GPS", "DGPS"][int(nmea["GGA"][5])]
 
         latitude = nmea["RMC"][2] 
@@ -260,8 +253,10 @@ class GPS(Node):
         # Precisions are DOP (Dilution of Precision)
         # to obtain the precision in meters, multiply by the HDOP/VDOP by the precision of the GPS receiver
         
-        course_angle = nmea["VTG"][0]
         speed = nmea["VTG"][6]
+        course_angle = nmea["VTG"][0]
+        course_angle = "?" if not course_angle else course_angle
+        
 
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"

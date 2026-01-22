@@ -133,6 +133,7 @@ class GPS(Node):
                                     + f" Current value : {callback_delay_second}")
             self.get_logger().warn("IMU node is shutting down...")
             self.is_valid = False
+            return
 
         
 
@@ -146,9 +147,9 @@ class GPS(Node):
         self.nmea = None
 
         #timer and publisher
-        self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
         self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
-        
+        self.timer = self.create_timer(callback_delay_second, self.send_gps_data())
+
         self.get_logger().info('GPS node has been started.')
 
     

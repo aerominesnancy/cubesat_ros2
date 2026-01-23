@@ -7,7 +7,7 @@ import time
 import adafruit_dht
 import board
 
-
+# ros2 run cubesat_pkg temp_hum_node --ros-args -p sensor_id:=1 -p gpio_pin:=4 -p callback_delay_second:=2.0
 
 class TemperatureHumidityNode(Node):
 
@@ -67,12 +67,12 @@ class TemperatureHumidityNode(Node):
         if hum is not None and temp is not None:
             msg_temp = Temperature()
             msg_temp.temperature = float(temp)
-            msg_temp.variance = 0
+            msg_temp.variance = 0.0
             self.temp_pub.publish(msg_temp)
 
             msg_hum = RelativeHumidity()
             msg_hum.relative_humidity= float(hum)/100
-            msg_hum.variance = 0
+            msg_hum.variance = 0.0
             self.hum_pub.publish(msg_hum)
         
             self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")

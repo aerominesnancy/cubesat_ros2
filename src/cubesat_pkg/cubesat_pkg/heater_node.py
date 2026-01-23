@@ -21,7 +21,7 @@ class Heater(Node):
         if self.pin_pwm == -1:
             self.get_logger().fatal(f"Heater pwm pin must be set to valid pin numbers. Current value is pwm_pin={self.pin_pwm}")
             self.is_valid = False
-        if self.sensor_id == -1:
+        if self.heater_id == -1:
             self.get_logger().fatal(f"Heater id must be set to valid id. Current value is heater_id={self.sensor_id}")
             self.is_valid = False
         

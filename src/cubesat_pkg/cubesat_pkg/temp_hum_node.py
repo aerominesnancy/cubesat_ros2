@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32
+from sensor_msgs.msg import Temperature
+from sensor_msgs.msg import RelativeHumidity
 
 import time
 import adafruit_dht
@@ -45,8 +46,8 @@ class TemperatureHumidityNode(Node):
             self.sensor = adafruit_dht.DHT11(getattr(board, f"D{self.pin}"))  # test rpi
 
             # publishers for temperature and humidity
-            self.temp_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/temperature", 1)
-            self.hum_pub = self.create_publisher(Float32, f"/temp_hum_sensor_{self.sensor_id}/humidity", 1)
+            self.temp_pub = self.create_publisher(Temperature, f"/temp_hum_sensor_{self.sensor_id}/temperature", 1)
+            self.hum_pub = self.create_publisher(RelativeHumidity, f"/temp_hum_sensor_{self.sensor_id}/humidity", 1)
 
             # timer for publishing sensor values
             self.create_timer(callback_delay_second, self.send_sensor_values)
@@ -64,12 +65,14 @@ class TemperatureHumidityNode(Node):
         temp, hum = self.sensor.temperature, self.sensor.humidity
 
         if hum is not None and temp is not None:
-            msg_temp = Float32()
-            msg_temp.data = float(temp)
+            msg_temp = Temperature()
+            msg_temp.temperature = float(temp)
+            msg_temp.variance = 0
             self.temp_pub.publish(msg_temp)
 
-            msg_hum = Float32()
-            msg_hum.data = float(hum)
+            msg_hum = RelativeHumidity()
+            msg_hum.relative_humidity= float(hum)/100
+            msg_hum.variance = 0
             self.hum_pub.publish(msg_hum)
         
             self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")

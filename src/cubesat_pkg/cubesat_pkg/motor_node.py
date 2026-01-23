@@ -6,16 +6,40 @@ from geometry_msgs.msg import Vector3
 import RPi.GPIO as GPIO
 import time
 
-class GPIOWrapper:
-    def __init__(self, pin):
-        self.pin = pin
+class motor_GPIOWrapper:
+    def __init__(self, pin_R, pin_L, pin_pwm):
+        # initialisation des pins
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        GPIO.setup(pin_R, GPIO.OUT)
+        GPIO.setup(pin_L, GPIO.OUT)
+        GPIO.setup(pin_pwm, GPIO.OUT)
+
+        # alimentation du moteur (choix du sens du rotation)
+        self.pin_R = pin_R  # fil orange
+        self.pin_L = pin_L  # fil vert
+        self.clockwise()
+
+        # pwm moteur (choix de la vitesse de rotation)
+        self.pin_pwm = pin_pwm
+        self.pwm = GPIO.PWM(pin_pwm, 100) # fil jaune
+        self.pwm.start(0)
         GPIO.setup(self.pin, GPIO.OUT)
 
-    def high(self):
-        GPIO.output(self.pin, GPIO.HIGH)
+    def clockwise(self):
+        GPIO.output(self.pin_R, GPIO.HIGH)
+        GPIO.output(self.pin_L, GPIO.LOW)
 
-    def low(self):
+    def counterClockwise(self):
         GPIO.output(self.pin, GPIO.LOW)
+    
+    def setpwm(self, pwm):
+        self.pwm.ChangeDutyCycle(pwm)
+
+    def cleanup(self):
+        self.pwm.stop()
+        GPIO.cleanup([self.pin_R, self.pin_L, self.pin_pwm])
+
 
 
 class Motor(Node):
@@ -25,9 +49,9 @@ class Motor(Node):
         self.is_valid = True
 
         # Récupération des paramètres
-        self.pin_R = self.declare_parameter('pin_input_1', -1).value
-        self.pin_L = self.declare_parameter('pin_input_2', -1).value
-        self.pin_pwm = self.declare_parameter('pwm_pin', -1).value
+        pin_R = self.declare_parameter('pin_input_1', -1).value
+        pin_L = self.declare_parameter('pin_input_2', -1).value
+        pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
         if self.pin_R == -1 or self.pin_L == -1 or self.pin_pwm == -1:
             self.get_logger().fatal("Motor GPIO pins must be set to valid pin numbers."
@@ -36,21 +60,10 @@ class Motor(Node):
             self.is_valid = False
 
         else:
-            # subscription to IMU data
-            self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 10)
+            # subscription to Temperature data
+            self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
 
-            # alimentation du moteur (choix du sens du rotation)
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
-            self.input_R = GPIOWrapper(self.pin_R)  # fil orange
-            self.input_L = GPIOWrapper(self.pin_L)  # fil vert
-            self.input_R.high()
-            self.input_L.low()
-
-            # pwm moteur (choix de la vitesse de rotation)
-            GPIO.setup(self.pin_pwm, GPIO.OUT)
-            self.pwm = GPIO.PWM(self.pin_pwm, 100) # fil jaune
-            self.pwm.start(0)
+            self.motor = motor_GPIOWrapper(pin_R, pin_L, pin_pwm)
 
             # log
             self.get_logger().info('Motor node has been started.')
@@ -60,12 +73,11 @@ class Motor(Node):
 
         pwm = int(100*msg.x / 360)
         self.get_logger().info(f"Setting motor speed to {pwm}%" )
-        self.pwm.ChangeDutyCycle(pwm)
+        self.motor.setpwm(pwm)
 
     def destroy_node(self):
         if self.is_valid:
-            self.pwm.stop()
-            GPIO.cleanup([self.pin_R, self.pin_L, self.pin_pwm])
+            self.motor.cleanup()
             self.get_logger().info('Motor GPIO cleaned up.')
 
 

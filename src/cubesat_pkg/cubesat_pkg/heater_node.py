@@ -22,7 +22,7 @@ class Heater(Node):
             self.get_logger().fatal(f"Heater pwm pin must be set to valid pin numbers. Current value is pwm_pin={self.pin_pwm}")
             self.is_valid = False
         if self.heater_id == -1:
-            self.get_logger().fatal(f"Heater id must be set to valid id. Current value is heater_id={self.sensor_id}")
+            self.get_logger().fatal(f"Heater id must be set to valid id. Current value is heater_id={self.heater_id}")
             self.is_valid = False
         
         if not self.is_valid:
@@ -43,7 +43,7 @@ class Heater(Node):
 
 
     def temp_sensor_callback(self, msg:Temperature):
-        self.get_logger().info(f'Received form sensor n°{self.sensor_id} : Temp = {msg.temperature}')
+        self.get_logger().info(f'Received form sensor n°{self.heater_id} : Temp = {msg.temperature}')
 
         pwm = min(100, 2*max(0, 50-msg.temperature))
         self.get_logger().info(f"Setting heater pwm to {pwm}%" )

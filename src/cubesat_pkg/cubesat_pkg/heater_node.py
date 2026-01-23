@@ -6,22 +6,23 @@ from sensor_msgs.msg import Temperature
 import RPi.GPIO as GPIO
 import time
 
+# ros2 run cubesat_pkg heater_node --ros-args -p heater_id:=1 -p pwm_pin:=18
 
 class Heater(Node):
 
-    def __init__(self, callback_delay_second=1.0):
+    def __init__(self):
         super().__init__('motor')
         self.is_valid = True
 
         # Récupération des paramètres
-        self.sensor_id = self.declare_parameter('heater_id', -1).value
+        self.heater_id = self.declare_parameter('heater_id', -1).value
         self.pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
         if self.pin_pwm == -1:
             self.get_logger().fatal(f"Heater pwm pin must be set to valid pin numbers. Current value is pwm_pin={self.pin_pwm}")
             self.is_valid = False
         if self.sensor_id == -1:
-            self.get_logger().fatal(f"Heater id must be set to valid id. Current value is sensor_id={self.sensor_id}")
+            self.get_logger().fatal(f"Heater id must be set to valid id. Current value is heater_id={self.sensor_id}")
             self.is_valid = False
         
         if not self.is_valid:

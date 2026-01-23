@@ -44,7 +44,7 @@ class motor_GPIOWrapper:
 
 class Motor(Node):
 
-    def __init__(self, callback_delay_second=1.0):
+    def __init__(self):
         super().__init__('motor')
         self.is_valid = True
 

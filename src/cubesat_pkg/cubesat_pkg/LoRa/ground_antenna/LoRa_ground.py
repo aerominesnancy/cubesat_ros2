@@ -68,6 +68,19 @@ def ask_for_file_transmission(file_path):
     return nb_of_paquets
 
 
+def ask_for_picture(compression_factor=50):
+    lora.send_message(compression_factor, "ask_for_picture")
+
+    msg = wait_for_msg_type("file_info")
+    if msg == None:
+        lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
+        return
+    nb_of_paquets, _ = msg
+
+    lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
+    return nb_of_paquets
+
+
 def ask_for_paquet(paquet_index):
     lora.send_message(paquet_index, "ask_for_file_paquet")
 
@@ -86,11 +99,17 @@ def ask_for_paquet(paquet_index):
         logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
 
 
-
+""" ######## depreciated #######
 # demande de transmission et attente de l'indication du nombre de paquets
 nb_of_paquets = None
 while nb_of_paquets == None:
     nb_of_paquets = ask_for_file_transmission("/home/cubesat/ros2_ws/pictures/last_picture.jpg")
+"""
+
+# demande de transmission et attente de l'indication du nombre de paquets
+nb_of_paquets = None
+while nb_of_paquets == None:
+    nb_of_paquets = ask_for_picture(compression_factor = 10)
 
 # demande de paquets et attente de reception
 file_data = b''

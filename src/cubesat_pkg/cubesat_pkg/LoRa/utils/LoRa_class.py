@@ -10,32 +10,6 @@ except ImportError:
 import binascii
 
 
-class Raise_Errors_Logger():
-    """ This logger raises exceptions on warnings and errors.
-    It is used for testing and debugging purposes (cf. __main__ section).
-    """
-    def info(self, msg):
-        print(f"[INFO] {msg}")
-    def warn(self, msg):
-        raise UserWarning(f"[WARN] {msg}")
-    def error(self, msg):
-        raise Exception(f"[ERROR] {msg}")
-
-class Just_Print_Logger():
-    """ This logger just prints messages to the console without raising exceptions. 
-    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
-    def info(self, msg):
-        print(f"[INFO] {msg}")
-
-    def warn(self, msg):
-        print(f"[WARN] {msg}")
-
-    def error(self, msg):
-        print(f"[ERROR] {msg}")
-
-
-
-
 class LoRa():
     START_MARKER = b'\xAA\xBB'  # Marqueur de début
     END_MARKER = b'\xCC\xDD'    # Marqueur de fin
@@ -44,6 +18,7 @@ class LoRa():
                   0x02: "string",
                   0x03: "timestamp_update",
                 
+                  0x89: "ask_for_picture", # demande de la dernière image capturée avec un certain niveau de compression
                   0x90: "ask_for_file_transmission", # demande le transfert d'un fichier
                   0x91: "ask_for_file_paquet",      # demande un certain paquet
                   0x92: "file_paquet",              # renvoie un paquet
@@ -58,7 +33,7 @@ class LoRa():
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
                  AUX_timeout_s=5.0, serial_timeout_s=5.0,
                  ACK_timeout_s=5.0,
-                 logger=Raise_Errors_Logger()):
+                 logger=None):
         
         self.logger = logger
 
@@ -181,7 +156,7 @@ def calculate_checksum(data_bytes):
     # utilisation du checksum CRC-16
     return struct.pack(">H", binascii.crc_hqx(data_bytes, 0xffff))
 
-def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, END_MARKER, logger=Raise_Errors_Logger()) -> bytes:
+def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, END_MARKER, logger=None) -> bytes:
     """ 
     [Marqueur de début (2 octets)]
     [Checksum (2 octets)]
@@ -256,6 +231,13 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         else:
             logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'file_info'. Message actuel : (type : {type(message)}) {message}")
             return None
+    
+    # envoie d'une photo
+    elif msg_type == "ask_for_picture":
+        if isinstance(message, int) and message <= 100 and message >= 0:
+            data_bytes = struct.pack('>B', message)
+        else:
+            logger.error(f"Le message (compression_factor) doit être de type 'int' et doit être compris entre 0 et 100 pour l'encapsulation de type 'ask_for_pictures' (50 par defaut)")
 
 
     # mise en forme de l'envoie
@@ -275,7 +257,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
 
 
 class Buffer():
-    def __init__(self, START_MARKER, END_MARKER, id_to_type, wrapper_size, logger=Raise_Errors_Logger()):
+    def __init__(self, START_MARKER, END_MARKER, id_to_type, wrapper_size, logger=None):
         self.START_MARKER = START_MARKER
         self.END_MARKER = END_MARKER
         self.id_to_type = id_to_type
@@ -394,6 +376,10 @@ class Buffer():
                     self.logger.info(f"Reception du paquet {paquet_index} du fichier en cours.")
 
                     return (paquet_index, paquet_data)
+                
+            elif data_type == "ask_for_picture":
+                compression_factor = struct.unpack(">B", data_bytes)[0]
+                return compression_factor
 
         except Exception as e:
             self.logger.error(f"Erreur lors du décodage du message: {e}")

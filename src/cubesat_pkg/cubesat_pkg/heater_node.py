@@ -29,7 +29,7 @@ class Heater(Node):
             self.get_logger().warn("Motor node is shutting down...")
         else:
             # subscription to temperature data
-            self.imu_subscriber = self.create_subscription(Temperature, f"/temp_hum_sensor_{self.heater_id}/temperature", self.temp_sensor_callback, 1)
+            self.create_subscription(Temperature, f"/temp_hum_sensor_{self.heater_id}/temperature", self.temp_sensor_callback, 1)
 
             # pwm moteur (choix de la vitesse de rotation)
             GPIO.setmode(GPIO.BCM)

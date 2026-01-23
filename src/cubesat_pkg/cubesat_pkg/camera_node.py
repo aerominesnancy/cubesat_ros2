@@ -1,11 +1,8 @@
-
-
-
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Vector3
-
+from std_msgs.msg import ByteMultiArray
+from std_msgs.msg import Int8
 
 import time
 import os
@@ -41,10 +38,30 @@ class camera(Node):
             self.path = "/home/cubesat/ros2_ws/pictures/"
             os.makedirs(self.path, exist_ok=True)
 
+            # create pub sub
+            self.create_subscription(Int8, '/camera/ask_picture', self.send_picture_when_ask, 1)
+            self.picture_pub = self.create_publisher(ByteMultiArray, '/camera/picture', 1)
+
+
             self.get_logger().info('Camera node has been started.')
 
+    def send_picture_when_ask(self, msg):
+        compression_factor = msg.data
+        self.get_logger().info(f"Asking picture with a compression factor of {compression_factor}%")
 
-    def take_picture(self, compression_factor = 50):
+        # take picture
+        compressed_picture_bytes = self.take_picture(compression_factor, save_file=False)
+        if compressed_picture_bytes:
+            self.picture_pub.publish(ByteMultiArray(data=compressed_picture_bytes))
+
+        else: 
+            self.get_logger().warn("Picture transfert cancelled")
+            self.picture_pub.publish(ByteMultiArray(data=[]))
+
+
+
+
+    def take_picture(self, compression_factor = 50, save_file = True):
         """ Prend une phot et l'enregistre 2 fois:
         1 fois avec son timestamp
         1 fois sous le nom 'last_picture' (remplacé a chaque photo)
@@ -58,12 +75,22 @@ class camera(Node):
 
                 if ret:
                     # enregistre l'image avec une qualité de 50%
-                    cv2.imwrite(self.path + file_name, frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
-                    cv2.imwrite(self.path + "last_picture.jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
+                    if save_file:
+                        cv2.imwrite(self.path + file_name, frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
-                    self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+                        self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+                        return
+                    else:
 
-                    return
+                        success, jpeg_binary = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), compression_factor])
+                        if not success:
+                            self.get_logger().error(f"Error in picture compression. Returning None.")
+                            return 
+                        
+                        self.get_logger().info(f"Picture taken and returned compressed successfully.")
+                        return bytearray(jpeg_binary)
+
+
                 else:
                     self.get_logger().warn("Failed to capture image from camera. Attempting to reconnect...")
                     self.cap.release()

@@ -61,7 +61,7 @@ class Motor(Node):
 
         else:
             # subscription to Temperature data
-            self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
+            self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
 
             self.motor = motor_GPIOWrapper(pin_R, pin_L, pin_pwm)
 

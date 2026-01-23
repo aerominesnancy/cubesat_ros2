@@ -45,6 +45,7 @@ setup(
             "camera_node = cubesat_pkg.camera_node:main",
             "lora_node = cubesat_pkg.LoRa.LoRa_node:main",
             "heater_node = cubesat_pkg.heater_node:main",
+            "gps_node = cubesat_pkg.GPS_node:main"
         ],
     },
 )

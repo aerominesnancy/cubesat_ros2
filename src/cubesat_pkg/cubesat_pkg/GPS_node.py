@@ -297,12 +297,13 @@ class GPS(Node):
         # change sign (East/West and North/South)
         lat_sign = 1 if lat_dir=="E" else -1
         long_sign = 1 if long_dir=="N" else -1
+        print(long_dir, lat_dir)
 
         # Convert "degrees and minutes" to "decimal degrees"
         lat = float(latitude[:2]) + float(latitude[2:]) / 60
         long = float(longitude[:3]) + float(longitude[3:]) / 60
 
-        return lat_sign*lat, long_sign*long
+        return round(lat_sign*lat, 4), round(long_sign*long, 4) # 4 decimals ~ 10m precision
 
 
     def extract_timestamp(self, nmea):

@@ -65,7 +65,6 @@ class lora(Node):
         if msg is None:
             return
         
-
         msg_type, message, checksum = msg
 
         # ACK may delay file transfert
@@ -78,8 +77,6 @@ class lora(Node):
         if "file" in msg_type or "picture" in msg_type:
             self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : {message}")
             self.handle_file_transfert(msg_type, message)
-
-
 
     
     def handle_file_transfert(self, message_type, message):
@@ -116,14 +113,15 @@ class lora(Node):
 
 
     def picture_received_from_camera(self, msg):
-        # when a picture (bytearray) is received from camera (after asking for it)
+        # when a picture (list of octets) is received from camera (after asking for it)
+        self.get_logger().info("Picture received from camera.")
         data = bytearray(msg.data)
 
         if data == b'':
             self.get_logger().warn("Issue with camera. Picture transfert cancelled.")
             
         nb_of_paquets = self.save_packets_list(data)
-        self.get_logger().info(f"Picture received from camera. Number of packets : {nb_of_paquets}")
+        self.get_logger().info(f"Number of packets : {nb_of_paquets}")
 
         self.lora.send_message(nb_of_paquets, "file_info")
                 
@@ -144,6 +142,7 @@ class lora(Node):
             # clean GPIO
             GPIO.cleanup([self.M0, self.M1, self.AUX])
             self.get_logger().info('LoRa GPIO cleaned up.')
+
 
 
 

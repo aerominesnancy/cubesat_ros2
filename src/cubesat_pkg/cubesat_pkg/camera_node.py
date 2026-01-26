@@ -42,11 +42,16 @@ class camera(Node):
             self.create_subscription(Int8, '/camera/ask_picture', self.send_picture_when_ask, 1)
             self.picture_pub = self.create_publisher(UInt8MultiArray, '/camera/picture', 1)
 
-            ######################### TEST #########################
-            self.send_picture_when_ask(Int8(data=50))
-            ########################################################
-
             self.get_logger().info('Camera node has been started.')
+
+            """
+            ######################### TEST #########################
+            time.sleep(1)
+            self.send_picture_when_ask(Int8(data=10))
+            ########################################################
+            """
+
+            
 
     def send_picture_when_ask(self, msg):
         compression_factor = msg.data

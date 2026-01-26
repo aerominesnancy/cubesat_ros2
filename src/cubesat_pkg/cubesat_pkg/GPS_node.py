@@ -157,16 +157,17 @@ class GPS(Node):
             self.print_gps_data_for_user()
             
             # convert position
-            latitude, longitude = self.convert_to_decimal_degrees(
+            latitude, longitude, altitude = self.convert_to_decimal_degrees(
                 self.nmea["RMC"][3].strip(), self.nmea["RMC"][2], # latitude  direction / latitude
-                self.nmea["RMC"][5].strip(), self.nmea["RMC"][4]) # longitude direction / longitude
-
+                self.nmea["RMC"][5].strip(), self.nmea["RMC"][4], # longitude direction / longitude
+                self.nmea["GGA"][8])                              # altitude
+            
             # publish data
             self.publisher.publish(NavSatFix(
                 status = NavSatStatus(status=NavSatStatus.STATUS_FIX),
                 latitude = latitude,
                 longitude = longitude,
-                altitude = float(self.nmea["GGA"][8])))
+                altitude = altitude))
 
         else:
             self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
@@ -293,17 +294,19 @@ class GPS(Node):
         return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}\"" ,
                 f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}\"")
     
-    def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude):
+    def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude, altitude):
         # change sign (East/West and North/South)
-        lat_sign = 1 if lat_dir=="E" else -1
-        long_sign = 1 if long_dir=="N" else -1
-        print(long_dir, lat_dir)
+        lat_sign = 1 if "E" in lat_dir else -1
+        long_sign = 1 if "N" in long_dir else -1
 
         # Convert "degrees and minutes" to "decimal degrees"
-        lat = float(latitude[:2]) + float(latitude[2:]) / 60
-        long = float(longitude[:3]) + float(longitude[3:]) / 60
+        lat  = round(float(latitude[:2])  + float(latitude[2:])  / 60, 4) # 4 decimals ~ 10m precision
+        long = round(float(longitude[:3]) + float(longitude[3:]) / 60, 4)
 
-        return round(lat_sign*lat, 4), round(long_sign*long, 4) # 4 decimals ~ 10m precision
+        # Convert altitude
+        alt = round(float(altitude))
+
+        return lat_sign*lat, long_sign*long, alt 
 
 
     def extract_timestamp(self, nmea):

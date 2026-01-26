@@ -46,12 +46,17 @@ class IMU(Node):
         if self.yaw is None or self.pitch is None or self.roll is None:
             self.get_logger().warn("Failed to read IMU data.")
             return False
-        if not(0 <= self.yaw and self.yaw <= 360):
+        
+        if 360 <= self.yaw and self.yaw <=370:
+            self.yaw -= 360 # correction d'une erreur courrante
+        elif not(0 <= self.yaw and self.yaw <= 360):
             self.get_logger().warn(f"IMU yaw data out of range : {self.yaw}")
             return False
+        
         if not(-90 <= self.pitch and self.pitch <= 90):
             self.get_logger().warn(f"IMU pitch data out of range : {self.pitch}")
             return False
+        
         if not(-180 <= self.roll and self.roll <= 180):
             self.get_logger().warn(f"IMU roll data out of range : {self.roll}")
             return False

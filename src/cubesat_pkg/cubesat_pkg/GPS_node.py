@@ -22,8 +22,6 @@ https://fr.wikipedia.org/wiki/NMEA_0183
 # ===============================================================================
 # all fields end with "\r\n" (CR-LF)
 
-
-
 GPRMC_FIELDS = [
     "utc_time",             # hhmmss.ss
     "status",               # A=valid, V=invalid
@@ -158,14 +156,16 @@ class GPS(Node):
             self.get_logger().info(f'GPS data decoded and valid.')
             self.print_gps_data_for_user()
             
-            # change sign (East/West and North/South)
-            lat_dir = 1 if self.nmea["RMC"][3]=="E" else -1
-            long_dir = 1 if self.nmea["RMC"][5]=="N" else -1
+            # convert position
+            latitude, longitude = self.convert_to_decimal_degrees(
+                self.nmea["RMC"][3], self.nmea["RMC"][2], # latitude  direction / latitude
+                self.nmea["RMC"][5], self.nmea["RMC"][4]) # longitude direction / longitude
 
+            # publish data
             self.publisher.publish(NavSatFix(
                 status = NavSatStatus(status=NavSatStatus.STATUS_FIX),
-                latitude = lat_dir * float(self.nmea["RMC"][2]),
-                longitude = long_dir * float(self.nmea["RMC"][4]),
+                latitude = latitude,
+                longitude = longitude,
                 altitude = float(self.nmea["GGA"][8])))
 
         else:
@@ -265,7 +265,7 @@ class GPS(Node):
         lat_dir = nmea["RMC"][3]
         longitude = nmea["RMC"][4]
         long_dir = nmea["RMC"][5]
-        latitude, longitude = self.convert_geolocalisation(latitude, longitude)
+        latitude, longitude = self.convert_to_degrees_minutes_seconds(latitude, longitude)
         h_precision = nmea["GSA"][15]
         h_precision = '?' if h_precision=='1.0' else h_precision
 
@@ -289,9 +289,20 @@ class GPS(Node):
             )
         
         
-    def convert_geolocalisation(self, latitude, longitude):
-        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}''" ,
-                f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}''")
+    def convert_to_degrees_minutes_seconds(self, latitude, longitude):
+        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}\"" ,
+                f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}\"")
+    
+    def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude):
+        # change sign (East/West and North/South)
+        lat_sign = 1 if lat_dir=="E" else -1
+        long_sign = 1 if long_dir=="N" else -1
+
+        # Convert "degrees and minutes" to "decimal degrees"
+        lat = float(latitude[:2]) + float(latitude[2:]) / 60
+        long = float(longitude[:3]) + float(longitude[3:]) / 60
+
+        return lat_sign*lat, long_sign*long
 
 
     def extract_timestamp(self, nmea):

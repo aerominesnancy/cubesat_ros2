@@ -51,7 +51,7 @@ class lora(Node):
             self.ask_camera_for_picture_pub = self.create_publisher(Int8, '/camera/ask_picture', 1)
             self.create_subscription(UInt8MultiArray, '/camera/picture', self.picture_received_from_camera, 1)
 
-            self.create_subscription(NavSatFix, '/gpa/data', self.send_gps_position, 1)
+            self.create_subscription(NavSatFix, '/gps/data', self.send_gps_position, 1)
 
             self.get_logger().info('lora node has been started.')
         

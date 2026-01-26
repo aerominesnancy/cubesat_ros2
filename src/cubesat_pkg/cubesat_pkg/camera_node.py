@@ -42,6 +42,9 @@ class camera(Node):
             self.create_subscription(Int8, '/camera/ask_picture', self.send_picture_when_ask, 1)
             self.picture_pub = self.create_publisher(UInt8MultiArray, '/camera/picture', 1)
 
+            ######################### TEST #########################
+            self.send_picture_when_ask(Int8(data=50))
+            ########################################################
 
             self.get_logger().info('Camera node has been started.')
 
@@ -52,6 +55,7 @@ class camera(Node):
         # take picture
         compressed_picture_bytes = self.take_picture(compression_factor, save_file=False)
         if compressed_picture_bytes:
+            self.get_logger().info(f"Published picture on topic '/camera/picture'.")
             self.picture_pub.publish(UInt8MultiArray(data=list(compressed_picture_bytes)))
 
         else: 
@@ -87,7 +91,7 @@ class camera(Node):
                             self.get_logger().error(f"Error in picture compression. Returning None.")
                             return 
                         
-                        self.get_logger().info(f"Picture taken and returned compressed successfully.")
+                        self.get_logger().info(f"Picture taken and compressed successfully.")
                         return bytearray(jpeg_binary)
 
 

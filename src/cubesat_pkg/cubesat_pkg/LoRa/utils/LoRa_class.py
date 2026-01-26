@@ -16,7 +16,7 @@ class LoRa():
     id_to_type = {0x00: "ACK",
                   0x01: "int",
                   0x02: "string",
-                  0x03: "timestamp_update",
+                  0x03: "gps",
                 
                   0x89: "ask_for_picture", # demande de la dernière image capturée avec un certain niveau de compression
                   0x90: "ask_for_file_transmission", # demande le transfert d'un fichier
@@ -170,8 +170,14 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         logger.error(f"Type de données {msg_type} non supporté pour l'encapsulation.")
         return None
 
+    if msg_type =="gps":
+        if isinstance(message, tuple) and len(message)==4 and isinstance(message[0], int) and isinstance(message[1], float) and isinstance(message[2], float) and isinstance(message[3], float):
+            data_bytes = struct.pack('>ifff', *message)
+        else:
+            logger.error(f"Le message doit être un tuple de 4 éléments (int, float, float, float) pour l'encapsulation de type 'gps'. Message actuel : (type : {type(message)}) {message}")
+
     # envoie d'un ACK
-    if msg_type == "ACK":
+    elif msg_type == "ACK":
         if isinstance(message, (bytes, bytearray)) and len(message)==2:
             data_bytes = message
         else:
@@ -179,7 +185,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
             return None
 
     # envoie d'un int 
-    if msg_type == "int":
+    elif msg_type == "int":
         if isinstance(message, int):
             data_bytes = struct.pack('>i', message) 
         else:
@@ -192,14 +198,6 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
             data_bytes = message.encode('utf-8')
         else:
             logger.error(f"Le message doit être de type 'str' pour l'encapsulation de type 'string'. Message actuel : (type : {type(message)}) {message}")
-            return None
-    
-    # envoie d'un timestamp (pour update le satelite)
-    elif msg_type == "timestamp_update":
-        if isinstance(message, (int, float)):
-            data_bytes = struct.pack('>I', int(message)) 
-        else:
-            logger.error(f"Le message doit être de type 'int' ou 'float' pour l'encapsulation de type 'timestamp_update'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoi d'un fichier
@@ -344,17 +342,17 @@ class Buffer():
 
     def decode_message(self, data_type, data_bytes):
         try:
-            if data_type == "ACK":
+            if data_type == "gps":
+                return struct.unpack(">ifff", data_bytes)  # (status, latitude, longitude, altitude)
+            
+            elif data_type == "ACK":
                 return data_bytes
             
-            if data_type == "int":
+            elif data_type == "int":
                 return struct.unpack('>i', data_bytes)[0]
             
             elif data_type == "string":
                 return data_bytes.decode('utf-8')
-            
-            elif data_type == "timestamp_update":
-                return struct.unpack('>I', data_bytes)[0]
             
             elif "file" in data_type:
                 if data_type == "ask_for_file_transmission":

@@ -63,7 +63,7 @@ class lora(Node):
         
         self.get_logger().info(f"GPS position received (status={status}): lat={latitude} long={longitude} alt={altitude}")
         
-        #self.lora.send_message(msg, "gps")
+        self.lora.send_message((status, latitude, longitude, altitude), "gps")
 
     def loop(self):
         # recover any incoming messages

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import ByteMultiArray
+from std_msgs.msg import UInt8MultiArray
 from std_msgs.msg import Int8
 
 import RPi.GPIO as GPIO
@@ -49,7 +49,7 @@ class lora(Node):
 
             # create publisher and listener
             self.ask_camera_for_picture_pub = self.create_publisher(Int8, '/camera/ask_picture', 1)
-            self.create_subscription(ByteMultiArray, '/camera/picture', self.picture_received_from_camera, 1)
+            self.create_subscription(UInt8MultiArray, '/camera/picture', self.picture_received_from_camera, 1)
 
             self.get_logger().info('lora node has been started.')
         
@@ -117,7 +117,7 @@ class lora(Node):
 
     def picture_received_from_camera(self, msg):
         # when a picture (bytearray) is received from camera (after asking for it)
-        data = msg.data
+        data = bytearray(msg.data)
 
         if data == b'':
             self.get_logger().warn("Issue with camera. Picture transfert cancelled.")

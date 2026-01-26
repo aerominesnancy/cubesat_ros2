@@ -24,14 +24,14 @@ class motor_GPIOWrapper:
         self.pin_pwm = pin_pwm
         self.pwm = GPIO.PWM(pin_pwm, 100) # fil jaune
         self.pwm.start(0)
-        GPIO.setup(self.pin, GPIO.OUT)
 
     def clockwise(self):
         GPIO.output(self.pin_R, GPIO.HIGH)
         GPIO.output(self.pin_L, GPIO.LOW)
 
     def counterClockwise(self):
-        GPIO.output(self.pin, GPIO.LOW)
+        GPIO.output(self.pin_L, GPIO.HIGH)
+        GPIO.output(self.pin_R, GPIO.LOW)
     
     def setpwm(self, pwm):
         self.pwm.ChangeDutyCycle(pwm)

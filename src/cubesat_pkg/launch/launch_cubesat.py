@@ -12,7 +12,6 @@ os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time} [{severity}] [{name}] \t
 
 # This function is always needed
 def generate_launch_description():
-  SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')
   
   # Declare a variable Node for each node
   imu_node = Node(
@@ -60,7 +59,8 @@ def generate_launch_description():
 
 
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node, motor_node, temp_hum_node_1, heater_node_1, gps_node, camera_node, lora_node]
+  ld = [imu_node, motor_node, temp_hum_node_1, heater_node_1, gps_node, camera_node, lora_node,
+        SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')]
   return LaunchDescription(ld)
 
 

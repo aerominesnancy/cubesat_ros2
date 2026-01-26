@@ -58,11 +58,12 @@ class TemperatureHumidityNode(Node):
     def send_sensor_values(self):
         try: 
             self.sensor.measure()
-        except:
-            self.get_logger().warn(f"Failed to read sensor n°{self.sensor_id}.")
+            temp, hum = self.sensor.temperature, self.sensor.humidity
+        except Exception as e:
+            self.get_logger().warn(f"Failed to read sensor n°{self.sensor_id}. Error : {e}")
             return
         
-        temp, hum = self.sensor.temperature, self.sensor.humidity
+        
 
         if hum is not None and temp is not None:
             msg_temp = Temperature()

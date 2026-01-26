@@ -53,9 +53,9 @@ class Motor(Node):
         pin_L = self.declare_parameter('pin_input_2', -1).value
         pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
-        if self.pin_R == -1 or self.pin_L == -1 or self.pin_pwm == -1:
+        if pin_R == -1 or pin_L == -1 or pin_pwm == -1:
             self.get_logger().fatal("Motor GPIO pins must be set to valid pin numbers."
-                                    + f" Current values : pin_input_1={self.pin_R}, pin_input_2={self.pin_L}, pwm_pin={self.pin_pwm}")
+                                    + f" Current values : pin_input_1={pin_R}, pin_input_2={pin_L}, pwm_pin={pin_pwm}")
             self.get_logger().warn("Motor node is shutting down...")
             self.is_valid = False
 

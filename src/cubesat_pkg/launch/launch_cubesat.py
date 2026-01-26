@@ -12,7 +12,7 @@ os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time} [{severity}] [{name}] \t
 
 # This function is always needed
 def generate_launch_description():
-  SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1'),
+  SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')
   
   # Declare a variable Node for each node
   imu_node = Node(

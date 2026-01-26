@@ -284,8 +284,8 @@ class GPS(Node):
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
             f"number of satellites : {num_sat}\t\t fix quality : {fix_quality}\t\t fix type : {fix_type}\n"
-            f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (precision: {h_precision})\n"
-            f"altitude : {altitude}MSL (precision: {v_precision})\n"
+            f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (dilution of precision : {h_precision})\n"
+            f"altitude : {altitude}MSL (dilution of precision : {v_precision})\n"
             f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"
             )
         
@@ -296,8 +296,8 @@ class GPS(Node):
     
     def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude, altitude):
         # change sign (East/West and North/South)
-        lat_sign = 1 if "E" in lat_dir else -1
-        long_sign = 1 if "N" in long_dir else -1
+        lat_sign = 1 if lat_dir=="N" else -1
+        long_sign = 1 if long_dir=="E" else -1
 
         # Convert "degrees and minutes" to "decimal degrees"
         lat  = round(float(latitude[:2])  + float(latitude[2:])  / 60, 4) # 4 decimals ~ 10m precision

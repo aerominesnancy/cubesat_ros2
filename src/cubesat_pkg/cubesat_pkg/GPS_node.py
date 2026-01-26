@@ -1,11 +1,15 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatFix, NavSatStatus
+# ros2 interface show sensor_msgs/msg/NavSatFix
 
 from datetime import datetime, timezone # to convert UTC time to timestamp
 import time
 import serial
+
 """
+https://www.coordonnees-gps.fr/
+
 The module uses NEO-6M chip. It currently send NMEA0183 messages : 
 RMC, VTG GGA, GSA, GSV(several times), GLL messages (in this order)
 and one binary message (certainly UBX) that is not decoded yet.
@@ -139,7 +143,7 @@ class GPS(Node):
             self.nmea = None
 
             #timer and publisher
-            self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
+            self.publisher = self.create_publisher(NavSatFix, '/gps/data', 1)
             self.timer = self.create_timer(callback_delay_second, self.send_gps_data)
 
             self.get_logger().info('GPS node has been started.')
@@ -153,10 +157,23 @@ class GPS(Node):
         if self.nmea["RMC"][1] == "A":
             self.get_logger().info(f'GPS data decoded and valid.')
             self.print_gps_data_for_user()
-            self.get_logger().warn("No publication on ros2 topic for the moment".upper())
+            
+            # change sign (East/West and North/South)
+            lat_dir = 1 if self.nmea["RMC"][3]=="E" else -1
+            long_dir = 1 if self.nmea["RMC"][5]=="N" else -1
+
+            self.publisher.publish(NavSatFix(
+                status = NavSatStatus(status=NavSatStatus.STATUS_FIX),
+                latitude = lat_dir * self.nmea["RMC"][2],
+                longitude = long_dir * self.nmea["RMC"][4],
+                altitude = self.nmea["GGA"][8]))
 
         else:
             self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
+            self.publisher.publish(NavSatFix(
+                status = NavSatStatus(status=NavSatStatus.STATUS_NO_FIX)))
+        
+        self.get_logger().info(f"GPS data published on topic : '/gps/data'")
               
         
     def read_gps_data(self):

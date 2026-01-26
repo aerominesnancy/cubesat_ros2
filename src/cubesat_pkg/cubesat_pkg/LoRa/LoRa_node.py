@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import UInt8MultiArray
-from std_msgs.msg import Int8
+from std_msgs.msg import UInt8MultiArray, Int8 #camera
+from sensor_msgs.msg import NavSatFix, NavSatStatus # gps
 
 import RPi.GPIO as GPIO
 import time
@@ -51,8 +51,17 @@ class lora(Node):
             self.ask_camera_for_picture_pub = self.create_publisher(Int8, '/camera/ask_picture', 1)
             self.create_subscription(UInt8MultiArray, '/camera/picture', self.picture_received_from_camera, 1)
 
+            self.create_subscription(NavSatFix, '/gpa/data', self.send_gps_position, 1)
+
             self.get_logger().info('lora node has been started.')
         
+    def send_gps_position(self, msg):
+        status = msg.status.status
+        latitude = msg.latitue
+        longitude = msg.longitude
+        altitude = msg.altitude
+
+        self.lora.send_message(msg, "gps")
 
     def loop(self):
         # recover any incoming messages

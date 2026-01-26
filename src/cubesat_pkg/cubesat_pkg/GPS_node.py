@@ -304,7 +304,7 @@ class GPS(Node):
         long = round(float(longitude[:3]) + float(longitude[3:]) / 60, 4)
 
         # Convert altitude
-        alt = round(float(altitude))
+        alt = float(altitude)
 
         return lat_sign*lat, long_sign*long, alt 
 

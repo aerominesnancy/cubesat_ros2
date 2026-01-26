@@ -52,7 +52,7 @@ class camera(Node):
         # take picture
         compressed_picture_bytes = self.take_picture(compression_factor, save_file=False)
         if compressed_picture_bytes:
-            self.picture_pub.publish(ByteMultiArray(data=compressed_picture_bytes))
+            self.picture_pub.publish(ByteMultiArray(data=list(compressed_picture_bytes)))
 
         else: 
             self.get_logger().warn("Picture transfert cancelled")

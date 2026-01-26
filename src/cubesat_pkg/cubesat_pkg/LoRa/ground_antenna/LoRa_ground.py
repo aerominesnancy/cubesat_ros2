@@ -9,8 +9,19 @@
 import time
 import threading
 import RPi.GPIO as GPIO
-from LoRa_class import LoRa, Just_Print_Logger
+from LoRa_class import LoRa
 
+class Just_Print_Logger():
+    """ This logger just prints messages to the console without raising exceptions. 
+    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
+    def info(self, msg):
+        print(f"[INFO] {msg}")
+
+    def warn(self, msg):
+        print(f"[WARN] {msg}")
+
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
      
 # Initialize LoRa module with GPIO pins and timeouts
 logger = Just_Print_Logger()

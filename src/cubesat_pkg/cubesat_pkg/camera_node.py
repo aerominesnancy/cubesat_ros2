@@ -40,7 +40,7 @@ class camera(Node):
 
             # create pub sub
             self.create_subscription(Int8, '/camera/ask_picture', self.send_picture_when_ask, 1)
-            self.picture_pub = self.create_publisher(ByteMultiArray, '/camera/picture', 1)
+            self.picture_pub = self.create_publisher(UInt8MultiArray, '/camera/picture', 1)
 
 
             self.get_logger().info('Camera node has been started.')
@@ -52,11 +52,11 @@ class camera(Node):
         # take picture
         compressed_picture_bytes = self.take_picture(compression_factor, save_file=False)
         if compressed_picture_bytes:
-            self.picture_pub.publish(ByteMultiArray(data=list(compressed_picture_bytes)))
+            self.picture_pub.publish(UInt8MultiArray(data=list(compressed_picture_bytes)))
 
         else: 
             self.get_logger().warn("Picture transfert cancelled")
-            self.picture_pub.publish(ByteMultiArray(data=[]))
+            self.picture_pub.publish(UInt8MultiArray(data=[]))
 
 
 

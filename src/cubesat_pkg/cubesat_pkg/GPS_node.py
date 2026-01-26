@@ -158,8 +158,8 @@ class GPS(Node):
             
             # convert position
             latitude, longitude = self.convert_to_decimal_degrees(
-                self.nmea["RMC"][3], self.nmea["RMC"][2], # latitude  direction / latitude
-                self.nmea["RMC"][5], self.nmea["RMC"][4]) # longitude direction / longitude
+                self.nmea["RMC"][3].strip(), self.nmea["RMC"][2], # latitude  direction / latitude
+                self.nmea["RMC"][5].strip(), self.nmea["RMC"][4]) # longitude direction / longitude
 
             # publish data
             self.publisher.publish(NavSatFix(

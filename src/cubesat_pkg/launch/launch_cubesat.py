@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 
 import os
 # change log format
-os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time} [{severity}] [{name}] \t{message}'
+os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '    \t{time} [{severity}] [{name}] \t{message}'
 
 
 # This function is always needed
@@ -17,8 +17,7 @@ def generate_launch_description():
   imu_node = Node(
     package="cubesat_pkg",
     executable="imu_node",
-    parameters=[{'callback_delay_second': 1.0}],
-    emulate_tty=True
+    parameters=[{'callback_delay_second': 1.0}]
   )
 
   motor_node = Node(
@@ -60,8 +59,8 @@ def generate_launch_description():
 
 
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node, motor_node, temp_hum_node_1, heater_node_1, gps_node, camera_node, lora_node,
-        SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')]
+  ld = [imu_node, motor_node, temp_hum_node_1, heater_node_1, gps_node, camera_node, lora_node]
+
   return LaunchDescription(ld)
 
 

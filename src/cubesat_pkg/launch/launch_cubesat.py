@@ -18,6 +18,7 @@ def generate_launch_description():
     package="cubesat_pkg",
     executable="imu_node",
     parameters=[{'callback_delay_second': 1.0}]
+    emulate_tty=True
   )
 
   motor_node = Node(

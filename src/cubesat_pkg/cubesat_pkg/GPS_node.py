@@ -164,9 +164,9 @@ class GPS(Node):
 
             self.publisher.publish(NavSatFix(
                 status = NavSatStatus(status=NavSatStatus.STATUS_FIX),
-                latitude = lat_dir * self.nmea["RMC"][2],
-                longitude = long_dir * self.nmea["RMC"][4],
-                altitude = self.nmea["GGA"][8]))
+                latitude = lat_dir * float(self.nmea["RMC"][2]),
+                longitude = long_dir * float(self.nmea["RMC"][4]),
+                altitude = float(self.nmea["GGA"][8])))
 
         else:
             self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')

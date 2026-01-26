@@ -11,7 +11,7 @@ import time
 class Heater(Node):
 
     def __init__(self):
-        super().__init__('motor')
+        super().__init__('heater')
         self.is_valid = True
 
         # Récupération des paramètres
@@ -26,7 +26,7 @@ class Heater(Node):
             self.is_valid = False
         
         if not self.is_valid:
-            self.get_logger().warn("Motor node is shutting down...")
+            self.get_logger().warn("Heater node is shutting down...")
         else:
             # subscription to temperature data
             self.create_subscription(Temperature, f"/temp_hum_sensor_{self.heater_id}/temperature", self.temp_sensor_callback, 1)
@@ -39,7 +39,7 @@ class Heater(Node):
             self.pwm.start(0)
 
             # log
-            self.get_logger().info('Motor node has been started.')
+            self.get_logger().info('Heater node has been started.')
 
 
     def temp_sensor_callback(self, msg:Temperature):
@@ -60,18 +60,18 @@ class Heater(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    motor_node = Heater()
+    heater_node = Heater()
 
     # let the node "alive" until interrupted
     try :
-        if motor_node.is_valid:
-            rclpy.spin(motor_node)
+        if heater_node.is_valid:
+            rclpy.spin(heater_node)
 
     except KeyboardInterrupt:
-        motor_node.get_logger().warn('Motor node interrupted and is shutting down...')
+        heater_node.get_logger().warn('Heater node interrupted and is shutting down...')
 
     finally:
-        motor_node.destroy_node()
+        heater_node.destroy_node()
         if rclpy.ok():  # if the node is still running
             time.sleep(1)  # wait for logs to be sent
             rclpy.shutdown()

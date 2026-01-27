@@ -34,21 +34,14 @@ class LoRaGround():
 
         # init variables
         self.gps_data = {"last_update":0.0, "status":-1, "latitude":0.0, "longitude":0.0, "altitude":0.0}
+
         self._reset_file_transfert()
+        self.file_transfert_timeout = 5 # sec
+        self.max_number_of_try = 5
 
         # init message queue and callbacks
         self.message_queue = Queue()
         self.callbacks = {"gps" : self.gps_callback}   
-
-        ####################### TEST ################################
-        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
-        self.message_queue.put(("file_info", 10, None))
-        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
-        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
-        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
-        self.callbacks["file_info"] = self._handle_file_info
-        #############################################################
-
 
         # init threads
         self.running = True
@@ -113,8 +106,6 @@ class LoRaGround():
         self.nb_of_packets = -1
         self.current_packet_index = -1
         self.packets_list = []
-        self.file_transfert_timeout = 1 # sec
-        self.max_number_of_try = 5
 
     def ask_for_picture(self, compression_factor=50):
         """

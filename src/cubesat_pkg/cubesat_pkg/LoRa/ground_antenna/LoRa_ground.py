@@ -110,7 +110,7 @@ class LoRaGround():
         self.nb_of_packets = -1
         self.current_packet_index = -1
         self.packets_list = []
-        self.file_transfert_timeout = 10 # sec
+        self.file_transfert_timeout = 1 # sec
         self.max_number_of_try = 5
 
     def ask_for_picture(self, compression_factor=50):

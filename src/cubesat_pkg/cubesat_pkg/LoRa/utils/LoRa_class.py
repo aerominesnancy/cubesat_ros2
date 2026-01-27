@@ -78,7 +78,7 @@ class LoRa():
             time.sleep(0.001)
         
         if GPIO.input(self.AUX) == GPIO.LOW:
-            self.logger.warn("Timeout waiting for LoRa module to be ready (AUX pin HIGH).")
+            self.logger.warn("[loRa_Class.py] Timeout waiting for LoRa module to be ready (AUX pin HIGH).")
             return False
         
         return True
@@ -87,29 +87,29 @@ class LoRa():
 
     def send_bytes(self, data_bytes):
         if not isinstance(data_bytes, bytes):
-            self.logger.warn("The message must be encapsulated before sending ! No message sended.")
+            self.logger.warn("[loRa_Class.py] The message must be encapsulated before sending ! No message sended.")
 
         if not self.wait_aux():
-            self.logger.error("Cannot send message because LoRa module is not ready.")
+            self.logger.error("[loRa_Class.py] Cannot send message because LoRa module is not ready.")
             return  # cannot send if AUX is not HIGH
 
         try:
             self.ser.write(data_bytes)
 
         except serial.SerialTimeoutException:
-            self.logger.error("Error sending message: Serial timeout.")
+            self.logger.error("[loRa_Class.py] Error sending message: Serial timeout.")
 
 
         if not self.wait_aux():
-            self.logger.error("Try sending message for too long, message may not have been sent.")
+            self.logger.error("[loRa_Class.py] Try sending message for too long, message may not have been sent.")
             return  
 
-        self.logger.info(f"Message envoyé !")
+        self.logger.info(f"[loRa_Class.py] Message envoyé !")
 
 
     def send_message(self, message, message_type:str):
         encapsulation = self.encapsulate(message, message_type)
-        self.logger.info(f"Sending {message_type} : {message}")
+        self.logger.info(f"[loRa_Class.py] Sending {message_type} : {message}")
 
         if encapsulation is not None:
             checksum, bytes_message = encapsulation
@@ -122,7 +122,7 @@ class LoRa():
         if self.ser.in_waiting > 0:
             bytes_msg = self.ser.read(self.ser.in_waiting)
             self.buffer.append(bytes_msg)
-            self.logger.info(f"Received some data. Buffer size: {self.buffer.size} bytes.")
+            self.logger.info(f"[loRa_Class.py] Received some data. Buffer size: {self.buffer.size} bytes.")
         else:
             #self.logger.info(f"No data received.")
             pass
@@ -135,14 +135,14 @@ class LoRa():
     def encapsulate(self, message, msg_type) -> bytes:
         encapsulated = encapsulate(message, msg_type, self.type_to_id, self.packet_size-self.wrapper_size, self.START_MARKER, self.END_MARKER, self.logger)
         if encapsulated is None:
-            self.logger.error("Message encapsulation failed.")
+            self.logger.error("[loRa_Class.py] Message encapsulation failed.")
             return None
         return encapsulated
 
     def close(self):
         self.ser.close()
         GPIO.cleanup([self.M0, self.M1, self.AUX])
-        self.logger.warn("LoRa serial port closed and GPIO cleaned up.")
+        self.logger.warn("[loRa_Class.py] LoRa serial port closed and GPIO cleaned up.")
         del self
 
 

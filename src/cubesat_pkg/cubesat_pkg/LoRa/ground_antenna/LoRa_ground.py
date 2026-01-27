@@ -37,8 +37,8 @@ class LoRaGround():
         self._reset_file_transfert()
 
         # init message queue and callbacks
-        self.message_queue = Queue()
-        self.callbacks = {"gps" : self.gps_callback}      
+        self.message_queue = Queue(("gps",(-1,0.0,0.0,0.0),None), ("file_info", 10, None))
+        self.callbacks = {"gps" : self.gps_callback, "file_info": self._handle_file_info}      
 
         # init threads
         self.running = True

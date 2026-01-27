@@ -11,6 +11,9 @@ from queue import Queue
 from threading import Thread, Timer
 from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
+##############################################################################################
+
+
 class Just_Print_Logger():
     """ This logger just prints messages to the console without raising exceptions. 
     It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
@@ -22,14 +25,17 @@ class Just_Print_Logger():
 
     def error(self, msg):
         print(f"[ERROR] {msg}")
-     
+
+
+##############################################################################################
+##############################################################################################
 
 
 class LoRaGround():
 
-    def __init__(self, logger):
+    def __init__(self, logger=None):
         # init LoRa
-        self.logger = logger
+        self.logger = logger if logger else ExternalLogger(self) # use the UILogger if no logger is provided
         self.lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=self.logger)
 
         # init variables
@@ -42,6 +48,10 @@ class LoRaGround():
         # init message queue and callbacks
         self.message_queue = Queue()
         self.callbacks = {"gps" : self.gps_callback}   
+        self.external_observers = {"gps_update": [],            # list of functions to call in the UI for each event
+                                   "new_message_received": [],
+                                   "new_message_sent": [],
+                                   "new_log": []}
 
         # init threads
         self.running = True
@@ -67,6 +77,7 @@ class LoRaGround():
             # if a message is available, put it in the queue
             if msg is not None:
                 self.message_queue.put(msg)
+                self._notify_observers("new_message_received", msg)
 
             time.sleep(0.1)
 
@@ -87,6 +98,13 @@ class LoRaGround():
                     self.callbacks[msg_type](message)
 
             time.sleep(0.1)
+
+    def _send_message(self, message, msg_type):
+        """
+        Send a message to the cubesat.
+        """
+        self.lora.send_message(message, msg_type)
+        self._notify_observers("new_message_sended", (msg_type,message, None))
 
     def close_radio(self):
         """
@@ -116,7 +134,7 @@ class LoRaGround():
         self.file_name = "picture.jpg"
 
         # send request via LoRa and set callback for the response 'file_info'
-        self.lora.send_message(compression_factor, "ask_for_picture")
+        self._send_message(compression_factor, "ask_for_picture")
         self.callbacks["file_info"] = self._handle_file_info
 
     def _handle_file_info(self, message):
@@ -133,7 +151,7 @@ class LoRaGround():
     def _ask_for_file_packet(self, packet_index, number_of_try=0):
         """Ask for a specific packet and set a timeout."""
         # send LoRa message and set callback for the response 'file_packet'
-        self.lora.send_message(packet_index, "ask_for_file_packet")
+        self._send_message(packet_index, "ask_for_file_packet")
         self.callbacks["file_packet"] = self._handle_file_packet
 
         # start a timeout timer
@@ -193,16 +211,60 @@ class LoRaGround():
 
         self._reset_file_transfert()
 
-    ##################################### other callbacks #####################################
-    def gps_callback(self, message):
+    ################################## Other LoRa callbacks ###################################
+    def _handle_gps(self, message):
         self.gps_data["status"] = message[0]
         self.gps_data["latitude"] = message[1]
         self.gps_data["longitude"] = message[2]
         self.gps_data["altitude"] = message[3]
         self.gps_data["last_update"] = time.time()
-        self.logger.info(f"GPS callback : {message}")
 
-        
+        self.logger.info(f"GPS callback : {message}")
+        self._notify_observers("gps_update", self.gps_data)
+
+
+    ############################# Create external callback for UI #############################
+
+    def add_observer(self, event_type, observer):
+        """Ajoute un callback pour un type d'événement donné."""
+        if event_type in self.observers:
+            self.external_observers[event_type].append(observer)
+        else:
+            self.logger.error(f"Unknown event type : {event_type}.")
+
+    def _notify_observers(self, event_type, data):
+        """Notifie tous les callbacks enregistrés pour un type d'événement."""
+        if event_type in self.observers:
+            for observer in self.observers[event_type]:
+                observer(data)
+
+
+
+##############################################################################################
+##############################################################################################
+
+class ExternalLogger:
+    """Logger interne qui utilise _notify_observers de LoRaGround."""
+
+    def __init__(self, lora_instance:LoRaGround):
+        self.lora = lora_instance  # Référence à l'instance de LoRaGround
+
+    def info(self, msg):
+        print(f"[INFO]  {msg}")  # Optionnel : affiche dans la console
+        self.lora._notify_observers("new_log", f"[INFO]  {msg}")
+
+    def warn(self, msg):
+        print(f"[WARN]  {msg}")
+        self.lora._notify_observers("new_log", f"[WARN]  {msg}")
+
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
+        self.lora._notify_observers("new_log", f"[ERROR] {msg}")
+
+    def fatal(self, msg):
+        print(f"[FATAL] {msg}")
+        self.lora._notify_observers("new_log", f"[FATAL] {msg}")
+
 
 
 if __name__ == '__main__':

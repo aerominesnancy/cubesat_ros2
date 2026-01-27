@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext, messagebox
 from tkinter.ttk import LabelFrame, Label, Frame, Button
 import time
+from cubesat_pkg.LoRa.ground_antenna.LoRa_ground import LoRaGround
 
 
 
@@ -13,6 +14,14 @@ class GroundGUI(tk.Tk):
         self.geometry("1200x700")
         self.configure(bg="#f5f5f5")
         self.create_widgets_frames()
+
+        self.lora = LoRaGround() 
+
+        # create LoRa callbacks listeners
+        self.lora.add_observer("gps_update", self.update_gps)
+        self.lora.add_observer("new_message_received", lambda msg: self.add_history(msg, "received"))
+        self.lora.add_observer("new_message_sent", lambda msg: self.add_history(msg, "sended"))
+        self.lora.add_observer("new_log", self.add_log)
         
 
     def create_widgets_frames(self):
@@ -36,14 +45,21 @@ class GroundGUI(tk.Tk):
 
         # Titres au-dessus de chaque zone
         title_font = ("Arial", 12, "bold")
-        Label(frame, text="Historique des messages reçus :", font=title_font).grid(row=0, column=0)
-        Label(frame, text="Logs de l'antenne au sol :",      font=title_font).grid(row=0, column=1)
+        Label(frame, text="Historique des messages :", font=title_font).grid(row=0, column=0)
+        Label(frame, text="Logs de l'antenne au sol :",font=title_font).grid(row=0, column=1)
 
         # Zones ScrolledText côte à côte (C'EST DES OBJETS MUTABLE (BANGER pour les boutons))
         text_font =("Consolas", 10)
         self.messages_box = scrolledtext.ScrolledText(frame, height=height, state='disabled', font=text_font)
+        self.messages_box.tag_config("received", foreground="green")    # change color of message with tag "received"
+        self.messages_box.tag_config("sended", foreground="blue")       # change color of message with tag "sended"
         self.messages_box.grid(row=1, column=0)
+
         self.logs_box = scrolledtext.ScrolledText(frame, height=height, state='disabled', font=text_font)
+        self.logs_box.tag_config("info", foreground="black")    # change color of message with tag "info"
+        self.logs_box.tag_config("warn", foreground="orange")
+        self.logs_box.tag_config("error", foreground="red")
+        self.logs_box.tag_config("fatal", foreground="red", underline=True)
         self.logs_box.grid(row=1, column=1)
 
         # boutons
@@ -80,27 +96,40 @@ class GroundGUI(tk.Tk):
         Label(data_frame, textvariable=self.alt_var).grid(row=3, column=1, sticky="w")
 
 
-    def add_hitory(self, msg, box:str):
-        if box == "log" :       box = self.log_box
-        elif box == "history" : box = self.history_box
-        else: raise ValueError("Invalid box name")
+    def add_history(self, msg, tag:str):
+        if tag not in ["received", "sended"]: raise ValueError(f"Invalid message tag : '{tag}'\t must be 'received' or 'sended'.")
 
-        box['state'] = 'normal'
-        box.insert('end', msg + '\n')
-        box['state'] = 'disabled'
-        box.see('end')
+        self.messages_box['state'] = 'normal'
+        self.messages_box.insert('end', msg + '\n', tag)
+        self.messages_box['state'] = 'disabled'
+        self.messages_box.see('end')
+
+    def add_log(self, log_msg):
+        self.logs_box['state'] = 'normal'
+        if "[INFO]" in log_msg:
+            self.logs_box.insert('end', log_msg + '\n', "info")
+        elif "[ERROR]" in log_msg:
+            self.logs_box.insert('end', log_msg + '\n', "error")
+        elif "[WARN]" in log_msg:
+            self.logs_box.insert('end', log_msg + '\n', "warn")
+        elif "[FATAL]" in log_msg:
+            self.logs_box.insert('end', log_msg + '\n', "fatal")
+        else:
+            self.logs_box.insert('end', log_msg + '\n')
+        self.logs_box['state'] = 'disabled'
+        self.logs_box.see('end')
 
     def ask_image(self):
         messagebox.showinfo("Action", "Demande de transfert d'image envoyée.")
         self.add_message("[Action] Demande de transfert d'image envoyée.")
         # TODO: Ajouter l'envoi réel de la commande à l'antenne
 
-    def refresh_gps(self, status, latitude, longitude, altitude):
-        # TODO: Récupérer les vraies données
-        self.gps_status_txt.set(status)
-        self.lat_var.set(latitude)
-        self.long_var.set(longitude)
-        self.alt_var.set(altitude)
+    def update_gps(self, gps_data):
+        self.gps_status_txt.set(str(gps_data["status"]))
+        self.lat_var.set(str(gps_data["latitude"]))
+        self.long_var.set(str(gps_data["longitude"]))
+        self.alt_var.set(str(gps_data["altitude"]))
+        self.gps_last_update_txt.set(f"({round(time.time() - gps_data['last_update'])} s ago)")
 
     
     def clear_history(self, box):
@@ -109,17 +138,6 @@ class GroundGUI(tk.Tk):
         box['state'] = 'disabled'
 
         
-
-
-class GUI_Logger():
-    """ This logger is meant to write logs in the GUI log window."""
-    def __init__(self, gui: GroundGUI): self.gui = gui
-    def info(self, msg):  self.gui.add_hitory(f"{round(time.time(), 2)} [INFO]  {msg}", "log")
-    def warn(self, msg):  self.gui.add_hitory(f"{round(time.time(), 2)} [WARN]  {msg}", "log")
-    def error(self, msg): self.gui.add_hitory(f"{round(time.time(), 2)} [ERROR] {msg}", "log")
-    def fatal(self, msg): self.gui.add_hitory(f"{round(time.time(), 2)} [FATAL] {msg}", "log")
-
-    
 
 if __name__ == "__main__":
     app = GroundGUI()

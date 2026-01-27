@@ -1,6 +1,10 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
 from tkinter.ttk import LabelFrame, Label, Frame, Button
+import time
+
+
+
 
 class GroundGUI(tk.Tk):
     def __init__(self):
@@ -76,7 +80,11 @@ class GroundGUI(tk.Tk):
         Label(data_frame, textvariable=self.alt_var).grid(row=3, column=1, sticky="w")
 
 
-    def add_hitory(self, msg, box):
+    def add_hitory(self, msg, box:str):
+        if box == "log" :       box = self.log_box
+        elif box == "history" : box = self.history_box
+        else: raise ValueError("Invalid box name")
+
         box['state'] = 'normal'
         box.insert('end', msg + '\n')
         box['state'] = 'disabled'
@@ -87,12 +95,12 @@ class GroundGUI(tk.Tk):
         self.add_message("[Action] Demande de transfert d'image envoyée.")
         # TODO: Ajouter l'envoi réel de la commande à l'antenne
 
-    def refresh_gps(self):
+    def refresh_gps(self, status, latitude, longitude, altitude):
         # TODO: Récupérer les vraies données
-        self.gps_status_txt.set("Fix")
-        self.lat_var.set("48.8566")
-        self.long_var.set("2.3522")
-        self.alt_var.set("35")
+        self.gps_status_txt.set(status)
+        self.lat_var.set(latitude)
+        self.long_var.set(longitude)
+        self.alt_var.set(altitude)
 
     
     def clear_history(self, box):
@@ -102,6 +110,16 @@ class GroundGUI(tk.Tk):
 
         
 
+
+class GUI_Logger():
+    """ This logger is meant to write logs in the GUI log window."""
+    def __init__(self, gui: GroundGUI): self.gui = gui
+    def info(self, msg):  self.gui.add_hitory(f"{round(time.time(), 2)} [INFO]  {msg}", "log")
+    def warn(self, msg):  self.gui.add_hitory(f"{round(time.time(), 2)} [WARN]  {msg}", "log")
+    def error(self, msg): self.gui.add_hitory(f"{round(time.time(), 2)} [ERROR] {msg}", "log")
+    def fatal(self, msg): self.gui.add_hitory(f"{round(time.time(), 2)} [FATAL] {msg}", "log")
+
+    
 
 if __name__ == "__main__":
     app = GroundGUI()

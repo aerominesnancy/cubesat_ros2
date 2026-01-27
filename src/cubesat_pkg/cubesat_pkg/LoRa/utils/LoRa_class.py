@@ -20,14 +20,14 @@ class LoRa():
                 
                   0x89: "ask_for_picture", # demande de la dernière image capturée avec un certain niveau de compression
                   0x90: "ask_for_file_transmission", # demande le transfert d'un fichier
-                  0x91: "ask_for_file_paquet",      # demande un certain paquet
-                  0x92: "file_paquet",              # renvoie un paquet
-                  0x93: "file_info"                 # renvoie le nombre de paquets liés au transfert
+                  0x91: "ask_for_file_packet",      # demande un certain packet
+                  0x92: "file_packet",              # renvoie un packet
+                  0x93: "file_info"                 # renvoie le nombre de packets liés au transfert
                   }
     
     type_to_id = {v: k for k, v in id_to_type.items()}
 
-    paquet_size = 240
+    packet_size = 240
     wrapper_size = 9
 
     def __init__(self, M0_pin=-1 , M1_pin=-1, AUX_pin=-1, 
@@ -133,7 +133,7 @@ class LoRa():
 
 
     def encapsulate(self, message, msg_type) -> bytes:
-        encapsulated = encapsulate(message, msg_type, self.type_to_id, self.paquet_size-self.wrapper_size, self.START_MARKER, self.END_MARKER, self.logger)
+        encapsulated = encapsulate(message, msg_type, self.type_to_id, self.packet_size-self.wrapper_size, self.START_MARKER, self.END_MARKER, self.logger)
         if encapsulated is None:
             self.logger.error("Message encapsulation failed.")
             return None
@@ -167,21 +167,21 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
     """
 
     if msg_type not in type_to_id:
-        logger.error(f"Type de données {msg_type} non supporté pour l'encapsulation.")
+        logger.error(f"[loRa_Class.py] Type de données {msg_type} non supporté pour l'encapsulation.")
         return None
 
     if msg_type =="gps":
         if isinstance(message, tuple) and len(message)==4 and isinstance(message[0], int) and isinstance(message[1], float) and isinstance(message[2], float) and isinstance(message[3], float):
             data_bytes = struct.pack('>ifff', *message)
         else:
-            logger.error(f"Le message doit être un tuple de 4 éléments (int, float, float, float) pour l'encapsulation de type 'gps'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être un tuple de 4 éléments (int, float, float, float) pour l'encapsulation de type 'gps'. Message actuel : (type : {type(message)}) {message}")
 
     # envoie d'un ACK
     elif msg_type == "ACK":
         if isinstance(message, (bytes, bytearray)) and len(message)==2:
             data_bytes = message
         else:
-            logger.error(f"Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2). Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message contenu dans un ACK doit être un checksum ('>H' : bytearray de longueur 2). Message actuel : (type : {type(message)}) {message}")
             return None
 
     # envoie d'un int 
@@ -189,7 +189,7 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, int):
             data_bytes = struct.pack('>i', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'int'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être de type 'int' pour l'encapsulation de type 'int'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoie d'un string 
@@ -197,37 +197,37 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, str):
             data_bytes = message.encode('utf-8')
         else:
-            logger.error(f"Le message doit être de type 'str' pour l'encapsulation de type 'string'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être de type 'str' pour l'encapsulation de type 'string'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoi d'un fichier
     elif msg_type == "ask_for_file_transmission":
         if not isinstance(message, str):
-            logger.error(f"Le path du fichier doit être de type 'str' pour l'encapsulation de type 'ask_for_file_transmission'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le path du fichier doit être de type 'str' pour l'encapsulation de type 'ask_for_file_transmission'. Message actuel : (type : {type(message)}) {message}")
             return None
         else:
             data_bytes = message.encode("utf-8")
     
-    elif msg_type == "ask_for_file_paquet":
+    elif msg_type == "ask_for_file_packet":
         if isinstance(message, int):
             data_bytes = struct.pack('>H', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'ask_for_file_paquet'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être de type 'int' pour l'encapsulation de type 'ask_for_file_packet'. Message actuel : (type : {type(message)}) {message}")
             return None
         
-    elif msg_type == "file_paquet":
+    elif msg_type == "file_packet":
         if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message[1], bytes):
-            paquet_index, paquet_data = message
-            data_bytes = struct.pack(">H", paquet_index) + paquet_data
+            packet_index, packet_data = message
+            data_bytes = struct.pack(">H", packet_index) + packet_data
         else:
-            logger.error(f"Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_paquet'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_packet'. Message actuel : (type : {type(message)}) {message}")
             return None
 
     elif msg_type == "file_info":
         if isinstance(message, int):
             data_bytes = struct.pack('>H', message) 
         else:
-            logger.error(f"Le message doit être de type 'int' pour l'encapsulation de type 'file_info'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être de type 'int' pour l'encapsulation de type 'file_info'. Message actuel : (type : {type(message)}) {message}")
             return None
     
     # envoie d'une photo
@@ -235,14 +235,14 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
         if isinstance(message, int) and message <= 100 and message >= 0:
             data_bytes = struct.pack('>B', message)
         else:
-            logger.error(f"Le message (compression_factor) doit être de type 'int' et doit être compris entre 0 et 100 pour l'encapsulation de type 'ask_for_pictures' (50 par defaut)")
+            logger.error(f"[loRa_Class.py] Le message (compression_factor) doit être de type 'int' et doit être compris entre 0 et 100 pour l'encapsulation de type 'ask_for_pictures' (50 par defaut)")
 
 
     # mise en forme de l'envoie
     data_type = type_to_id[msg_type]
     length = len(data_bytes)
     if length > max_data_size:
-        logger.warn(f"Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)} > {max_data_size} bytes)! Risque de perte de paquets...")
+        logger.warn(f"[loRa_Class.py] Le message est trop long pour être envoyé en une seule fois ({len(data_bytes)} > {max_data_size} bytes)! Risque de perte de packets...")
         
     checksum = calculate_checksum(data_bytes)
     encapsulated_msg = START_MARKER + calculate_checksum(data_bytes) + struct.pack('>B', data_type) + struct.pack('>H', length) + data_bytes + END_MARKER
@@ -283,8 +283,8 @@ class Buffer():
 
         # si on detecte des reliquats dans le buffer, on le vide
         if start_index == -1 and self.size > 2:
-            self.logger.info(f"Contenu du buffer : {self.buffer}")
-            self.logger.warn("Reliquats détecté dans le buffer, buffer vidé.")
+            self.logger.info(f"[loRa_Class.py] Contenu du buffer : {self.buffer}")
+            self.logger.warn("[loRa_Class.py] Reliquats détecté dans le buffer, buffer vidé.")
             self.clear()
             return None
         
@@ -296,7 +296,7 @@ class Buffer():
             start_index = 0
             self.size = len(self.buffer)
 
-            self.logger.warn("Message incomplet au début du buffer. Données précédentes supprimées.")
+            self.logger.warn("[loRa_Class.py] Message incomplet au début du buffer. Données précédentes supprimées.")
             # on ne retourne rien pour 
 
         # si on a trouvé un message complet au debut du buffer
@@ -310,7 +310,7 @@ class Buffer():
 
             # 1ere verification
             if len(full_message) < self.wrapper_size:
-                self.logger.error(f"Message trop court pour être valide ({full_message}). Données supprimées.")
+                self.logger.error(f"[loRa_Class.py] Message trop court pour être valide ({full_message}). Données supprimées.")
                 return None
 
             # decomposition du message
@@ -321,13 +321,13 @@ class Buffer():
 
             # validations intégritée du message
             if checksum != calculate_checksum(data_bytes):
-                self.logger.error(f"Checksum différent détecté (reçu : {checksum}, calculé : {calculate_checksum(data_bytes)}). Le message est invalide. Données supprimées.")
+                self.logger.error(f"[loRa_Class.py] Checksum différent détecté (reçu : {checksum}, calculé : {calculate_checksum(data_bytes)}). Le message est invalide. Données supprimées.")
                 return None
             if len(data_bytes) != length:
-                self.logger.error(f"Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de paquets possible. Données supprimées.")
+                self.logger.error(f"[loRa_Class.py] Longueur des données incorrecte (réel:{len(data_bytes)} != indiqué:{length}). Perte de packets possible. Données supprimées.")
                 return None
             if data_type is None:
-                self.logger.error("Type de données inconnu. Données supprimées.")
+                self.logger.error("[loRa_Class.py] Type de données inconnu. Données supprimées.")
                 return None
 
 
@@ -335,7 +335,7 @@ class Buffer():
             if decoded is not None:
                 return data_type, decoded, checksum
             else:
-                self.logger.warn("Le message n'a pas pu être décodé.")
+                self.logger.warn("[loRa_Class.py] Le message n'a pas pu être décodé.")
         
         else:
             return None  # No complete message found
@@ -359,27 +359,24 @@ class Buffer():
                     file_path = data_bytes.decode('utf-8')
                     return file_path
                 
-                elif data_type == "ask_for_file_paquet":
-                    paquet_index = struct.unpack(">H", data_bytes)[0]
-                    return paquet_index
+                elif data_type == "ask_for_file_packet":
+                    packet_index = struct.unpack(">H", data_bytes)[0]
+                    return packet_index
 
                 elif data_type == "file_info":
-                    nb_of_paquets = struct.unpack(">H", data_bytes)[0]
-                    return nb_of_paquets
+                    nb_of_packets = struct.unpack(">H", data_bytes)[0]
+                    return nb_of_packets
 
-                elif data_type == "file_paquet":
-                    paquet_index = struct.unpack(">H", data_bytes[0:2])[0]
-                    paquet_data = data_bytes[2:]
-
-                    self.logger.info(f"Reception du paquet {paquet_index} du fichier en cours.")
-
-                    return (paquet_index, paquet_data)
+                elif data_type == "file_packet":
+                    packet_index = struct.unpack(">H", data_bytes[0:2])[0]
+                    packet_data = data_bytes[2:]
+                    return (packet_index, packet_data)
                 
             elif data_type == "ask_for_picture":
                 compression_factor = struct.unpack(">B", data_bytes)[0]
                 return compression_factor
 
         except Exception as e:
-            self.logger.error(f"Erreur lors du décodage du message: {e}")
+            self.logger.error(f"[loRa_Class.py] Erreur lors du décodage du message: {e}")
             return None
 

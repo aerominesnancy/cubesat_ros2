@@ -42,7 +42,7 @@ class lora(Node):
             self.lora = LoRa(self.M0, self.M1, self.AUX,
                              self.AUX_timeout, self.serial_timeout,
                              logger=self.get_logger()) # pass the ROS2 node logger to LoRa class
-            self.current_file_paquets = []
+            self.current_file_packets = []
 
             # create loop timer
             self.create_timer(self.loop_delay_milisecond/1000, self.loop)
@@ -102,8 +102,8 @@ class lora(Node):
                 return
 
             # if the file has been read properly
-            nb_of_paquets = self.save_packets_list(data)
-            self.lora.send_message(nb_of_paquets, "file_info")
+            nb_of_packets = self.save_packets_list(data)
+            self.lora.send_message(nb_of_packets, "file_info")
         
 
         elif message_type == "ask_for_picture":
@@ -114,13 +114,13 @@ class lora(Node):
             # create a timeout for the LoRa : send a message to the user if the camera doesn't work anymore
 
             
-        elif message_type == "ask_for_file_paquet":
-            paquet_index = message
-            if paquet_index<0 or paquet_index > len(self.current_file_paquets)-1:
-                self.get_logger().error(f"Paquet demandé inexistant : {paquet_index}. Demande de transfert annulée.")
+        elif message_type == "ask_for_file_packet":
+            packet_index = message
+            if packet_index<0 or packet_index > len(self.current_file_packets)-1:
+                self.get_logger().error(f"packet demandé inexistant : {packet_index}. Demande de transfert annulée.")
             
             else:
-                self.lora.send_message((paquet_index, self.current_file_paquets[paquet_index]), "file_paquet")
+                self.lora.send_message((packet_index, self.current_file_packets[packet_index]), "file_packet")
 
 
     def picture_received_from_camera(self, msg):
@@ -131,17 +131,17 @@ class lora(Node):
         if data == b'':
             self.get_logger().warn("Issue with camera. Picture transfert cancelled.")
             
-        nb_of_paquets = self.save_packets_list(data)
-        self.get_logger().info(f"Number of packets : {nb_of_paquets}")
+        nb_of_packets = self.save_packets_list(data)
+        self.get_logger().info(f"Number of packets : {nb_of_packets}")
 
-        self.lora.send_message(nb_of_paquets, "file_info")
+        self.lora.send_message(nb_of_packets, "file_info")
                 
 
     def save_packets_list(self, data):
-        # cut data and save the packets list in self.current_file_paquets
-        max_paquet_size = self.lora.paquet_size - self.lora.wrapper_size - 2 # on ajoute 2 octets pour le numéro du paquet
-        self.current_file_paquets = [data[i:i+max_paquet_size] for i in range(0, len(data), max_paquet_size)]
-        return len(self.current_file_paquets)
+        # cut data and save the packets list in self.current_file_packets
+        max_packet_size = self.lora.packet_size - self.lora.wrapper_size - 2 # on ajoute 2 octets pour le numéro du packet
+        self.current_file_packets = [data[i:i+max_packet_size] for i in range(0, len(data), max_packet_size)]
+        return len(self.current_file_packets)
 
     
     def destroy_node(self):

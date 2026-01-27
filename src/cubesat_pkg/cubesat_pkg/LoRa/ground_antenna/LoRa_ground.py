@@ -206,5 +206,5 @@ class LoRaGround():
 
 if __name__ == '__main__':
     lora = LoRaGround(Just_Print_Logger())
-    lora.close_radio()
+    #lora.close_radio()
 

@@ -15,10 +15,10 @@ class Just_Print_Logger():
     """ This logger just prints messages to the console without raising exceptions. 
     It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
     def info(self, msg):
-        print(f"[INFO] {msg}")
+        print(f"[INFO]  {msg}")
 
     def warn(self, msg):
-        print(f"[WARN] {msg}")
+        print(f"[WARN]  {msg}")
 
     def error(self, msg):
         print(f"[ERROR] {msg}")
@@ -43,6 +43,9 @@ class LoRaGround():
         ####################### TEST ################################
         self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
         self.message_queue.put(("file_info", 10, None))
+        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
+        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
+        self.message_queue.put(("gps",(-1,0.0,0.0,0.0),None))  
         self.callbacks["file_info"] = self._handle_file_info
         #############################################################
 
@@ -149,13 +152,13 @@ class LoRaGround():
     def _on_packet_timeout(self, packet_index, number_of_try):
         """Callback for the timeout timer. Start if no packet is received in time. Run _ask_for_file_packet again."""
         # remove callback and stop timer
-        self.logger.warn(f"Timeout : Aucun paquet {packet_index} reçu.")
+        self.logger.warn(f"Timeout ! Packet n°{packet_index} not received.")
         self.callbacks["file_packet"] = None
         self.timeout_timer.cancel()
 
         # retry if max number of try not reached
         if number_of_try < self.max_number_of_try:
-            self.logger.info(f"Retry number{number_of_try+1}/{self.max_number_of_try} for packet {packet_index}")
+            self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for packet {packet_index}")
             self._ask_for_file_packet(packet_index, number_of_try+1)
         
         # stop file transfert if max number of try reached

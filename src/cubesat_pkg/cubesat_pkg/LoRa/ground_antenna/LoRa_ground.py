@@ -7,191 +7,185 @@
 # ===================================================================
 
 import time
-import threading
-import RPi.GPIO as GPIO
-from LoRa_class import LoRa
-
-class Just_Print_Logger():
-    """ This logger just prints messages to the console without raising exceptions. 
-    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
-    def info(self, msg):
-        print(f"[INFO] {msg}")
-
-    def warn(self, msg):
-        print(f"[WARN] {msg}")
-
-    def error(self, msg):
-        print(f"[ERROR] {msg}")
-     
-# Initialize LoRa module with GPIO pins and timeouts
-logger = Just_Print_Logger()
-lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=logger)
-
-"""
-# Thread to continuously receive messages
-def receive_loop():
-    while True:
-        lora.listen_radio()
-        msg = lora.extract_message(remove_from_buffer = False)
-        if msg is not None:
-            msg_type, message, _ = msg
-            logger.info(f"Message received (type : {msg_type}) : {message}")
-
-        time.sleep(0.1)
-
-receiver_thread = threading.Thread(target=receive_loop, daemon=True)
-receiver_thread.start()
-"""
+from queue import Queue
+from threading import Thread
+from cubesat_pkg.LoRa.ground_antenna.ground_GUI import GroundGUI
+from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
 
-def wait_for_msg_type(message_type, timeout_s=5):
-    start = time.time()
-    logger.info(f"Waiting for message of type : {message_type}")
+class GUI_Logger():
+        """ This logger is meant to write logs in the GUI log window."""
+        def __init__(self, gui): self.gui = gui
+        def info(self, msg): self.gui.add_hitory(f"[INFO] {msg}", self.gui.logs_box)
+        def warn(self, msg): self.gui.add_hitory(f"[WARN] {msg}", self.gui.logs_box)
+        def error(self, msg): self.gui.add_hitory(f"[ERROR] {msg}", self.gui.logs_box)
+        def fatal(self, msg): self.gui.add_hitory(f"[FATAL] {msg}", self.gui.logs_box)
 
-    while time.time()-start < timeout_s:
-        lora.listen_radio()
-        msg = lora.extract_message()
-        
-        if msg is not None:
-            msg_type, message, checksum = msg
-        
-            if msg_type == message_type:
-                logger.info(f"Message de type {message_type} reçu, attente terminée.")
-                return message, checksum
-            else:
-                logger.info(f"Message d'un autre type reçu (type : {msg_type}) : {message}")
+
+class LoRaGround():
+
+    def __init__(self):
+        # init LoRa
+        self.GUI = GroundGUI()
+        self.logger = GUI_Logger(self.gui)
+        self.lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=self.logger)
+
+        # init message queue and callbacks
+        self.message_queue = Queue()
+        self.callbacks = {}
+
+        # init threads
+        self.running = True
+        self.receiver_thread = Thread(target=self._receive_loop, daemon=True)
+        self.receiver_thread.start()    
+        self.processor_thread = Thread(target=self._process_messages, daemon=True)
+        self.processor_thread.start() 
+
+    def _receive_loop(self):
+        """
+        This function is called in a separate thread.
+        It listens to the radio, extract the messages from buffer and puts the messages in a queue 'self.message_queue'.
+        """
+        while self.running:
+
+            # listen read and exctract message from LoRa buffer
+            self.lora.listen_radio()
+            msg = self.lora.extract_message(remove_from_buffer=True)
+
+            # if a message is available, put it in the queue and add it to the GUI history
+            if msg is not None:
+                self.message_queue.put(msg)
+                self.GUI.add_hitory(msg, self.GUI.messages_box)
+
+            time.sleep(0.1)
+
+    def _process_messages(self):
+        """
+        This function is called in a separate thread.
+        It processes the messages in the queue 'self.message_queue'.
+        """
+        while self.running:
+
+            # if a message is available in queue, process it
+            if not self.message_queue.empty():
+                msg_type, message, checksum = self.message_queue.get()
+                self.logger.info(f"Message traité (type : {msg_type}) : {message}")
+
+
+                if msg_type in self.callbacks and self.callbacks[msg_type]:
+                    self.callbacks[msg_type](message)
+            time.sleep(0.1)
+
+    def close(self):
+        """
+        This function is called to stop all threads and close the radio.
+        """
+        self.running = False
+        self.receiver_thread.join()
+        self.processor_thread.join()
+        self.lora.close()
+
+
+    def ask_for_picture(self, compression_factor=50, callback=None):
+        self.lora.send_message(compression_factor, "ask_for_picture")
+        self.callbacks["file_info"] = callback
+
+
+    def handle_file_info(self, message, checksum):
+        nb_of_paquets, _ = message
+        self.logger.info(f"Nombre de paquets à transférer : {nb_of_paquets}")
+        # Ici, vous pouvez lancer la réception des paquets de manière asynchrone
+
+
+
+
+
+    def _wait_for_msg_type(self, message_type, timeout_s=5):
+        start = time.time()
+        self.logger.info(f"Waiting for message of type : {message_type}")
+
+        while time.time()-start < timeout_s:
+            self.lora.listen_radio()
+            msg = self.lora.extract_message()
             
-    logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
-    return None
-
-
-
-def ask_for_file_transmission(file_path):
-    lora.send_message(file_path, "ask_for_file_transmission")
-
-    msg = wait_for_msg_type("file_info")
-    if msg == None:
-        lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
-        return
-    nb_of_paquets, _ = msg
-
-    lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
-    return nb_of_paquets
-
-
-def ask_for_picture(compression_factor=50):
-    lora.send_message(compression_factor, "ask_for_picture")
-
-    msg = wait_for_msg_type("file_info")
-    if msg == None:
-        lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
-        return
-    nb_of_paquets, _ = msg
-
-    lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
-    return nb_of_paquets
-
-
-def ask_for_paquet(paquet_index):
-    lora.send_message(paquet_index, "ask_for_file_paquet")
-
-    msg = wait_for_msg_type("file_paquet")
-    if msg == None:
-        logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
-        return
-
-    paquet_msg, _ = msg
-    paquet_index_received, paquet_data = paquet_msg
-
-    if paquet_index_received == paquet_index:
-        logger.info(f"Reception du paquet {paquet_index}")
-        return paquet_data
-    else:
-        logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
-
-
-""" ######## depreciated #######
-# demande de transmission et attente de l'indication du nombre de paquets
-nb_of_paquets = None
-while nb_of_paquets == None:
-    nb_of_paquets = ask_for_file_transmission("/home/cubesat/ros2_ws/pictures/last_picture.jpg")
-"""
-
-# demande de transmission et attente de l'indication du nombre de paquets
-nb_of_paquets = None
-while nb_of_paquets == None:
-    nb_of_paquets = ask_for_picture(compression_factor = 10)
-
-# demande de paquets et attente de reception
-file_data = b''
-for index in range(nb_of_paquets):
-    paquet = None
-    while paquet == None:
-        paquet = ask_for_paquet(index)
-    file_data += paquet
-
-# reconstruction du fichier
-with open("fichier_transmis.jpg", 'wb') as new_file:
-    new_file.write(file_data)
-
-
-lora.close()
-
-
-"""
-    def send_and_wait_ACK(self, checksum, data_bytes, number_of_try=10):
-        ACK_received = False
-
-        checksum, data_bytes = data_bytes
-        self.send_bytes(data_bytes)
-        ACK_received = self.wait_ACK(checksum)
-        
-        for i in range(2, number_of_try+1):
-            if ACK_received:
-                break
-            self.logger.warn(f"No ACK received. Message sended again (try {i+2}/{number_of_try}). Please wait...")
-            checksum, data_bytes = data_bytes
-            self.send_bytes(data_bytes)
-            ACK_received = self.wait_ACK(checksum)
+            if msg is not None:
+                msg_type, message, checksum = msg
             
-
-"""
-
-"""
-# Thread to continuously receive messages
-def receive_loop():
-    while True:
-        lora.listen_radio()
-        msg_type, message = lora.extract_message()
-        if message is not None and msg_type!="picture":
-            print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}", flush=True)
-        
-        if msg_type == "picture":
-            print("Image reçu")
-            print(message)
-
-        time.sleep(0.1)
-
-receiver_thread = threading.Thread(target=receive_loop, daemon=True)
-receiver_thread.start()
+                if msg_type == message_type:
+                    self.logger.info(f"Message de type {message_type} reçu, attente terminée.")
+                    return message, checksum
+                else:
+                    self.logger.info(f"Message d'un autre type reçu (type : {msg_type}) : {message}")
+                
+        self.logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
+        return None
 
 
-# test sending messages
-lora.send_bytes("test string", "string")
-time.sleep(1)
-lora.send_bytes(42, "int")
-time.sleep(1)
-lora.send_bytes(time.time(), "timestamp_update")
-time.sleep(1)
-lora.send_bytes(None, "picture_ask")
 
-print("End of main thread, quit with Ctrl+C to stop receiving.")
-while True:
-    try:
-        time.sleep(0.1)
-    except KeyboardInterrupt:
-        break
+    def _ask_for_file_transmission(self, file_path):
+        self.lora.send_message(file_path, "ask_for_file_transmission")
 
-lora.close()
-"""
+        msg = self.wait_for_msg_type("file_info")
+        if msg == None:
+            self.lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
+            return
+        nb_of_paquets, _ = msg
 
+        self.lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
+        return nb_of_paquets
+
+
+    def _ask_for_picture(self, compression_factor=50):
+        self.lora.send_message(compression_factor, "ask_for_picture")
+
+        msg = self.wait_for_msg_type("file_info")
+        if msg == None:
+            self.lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
+            return
+        nb_of_paquets, _ = msg
+
+        self.lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
+        return nb_of_paquets
+
+
+    def _ask_for_paquet(self, paquet_index):
+        self.lora.send_message(paquet_index, "ask_for_file_paquet")
+
+        msg = self.wait_for_msg_type("file_paquet")
+        if msg == None:
+            self.logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
+            return
+
+        paquet_msg, _ = msg
+        paquet_index_received, paquet_data = paquet_msg
+
+        if paquet_index_received == paquet_index:
+            self.logger.info(f"Reception du paquet {paquet_index}")
+            return paquet_data
+        else:
+            self.logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
+
+
+    def _picture_transfert(self, compression_factor=50):
+        # demande de transmission et attente de l'indication du nombre de paquets
+        nb_of_paquets = None
+        while nb_of_paquets == None:
+            nb_of_paquets = self.ask_for_picture(compression_factor)
+
+        # demande de paquets et attente de reception
+        file_data = b''
+        for index in range(nb_of_paquets):
+            paquet = None
+            while paquet == None:
+                paquet = self.ask_for_paquet(index)
+            file_data += paquet
+
+        # reconstruction du fichier
+        with open("fichier_transmis.jpg", 'wb') as new_file:
+            new_file.write(file_data)
+
+
+
+
+if __name__ == '__main__':
+    lora = LoRaGround()

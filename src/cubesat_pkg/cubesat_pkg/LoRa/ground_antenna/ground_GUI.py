@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext
 from tkinter.ttk import LabelFrame, Label, Button, Progressbar
 import time
-#from LoRa_ground import LoRaGround
+from LoRa_ground import LoRaGround
 
 
 
@@ -16,7 +16,7 @@ class GroundGUI(tk.Tk):
         self.root.configure(bg="#f5f5f5")
         self.create_widgets()
 
-        """
+
         self.lora = LoRaGround() 
 
         # create LoRa callbacks listeners
@@ -25,8 +25,8 @@ class GroundGUI(tk.Tk):
         self.lora.add_observer("new_message_sent", lambda msg: self.add_history(msg, "sended"))
         self.lora.add_observer("new_log", self.add_log)
         self.lora.add_observer("file_transfert_percent", self.update_file_progressbar)
-        self.lora.add_observer("file_transfert_end")
-        """
+        self.lora.add_observer("file_transfert_end", self.end_transmission)
+
 
         
     def create_widgets(self):
@@ -124,7 +124,7 @@ class GroundGUI(tk.Tk):
         if tag not in ["received", "sended"]: raise ValueError(f"Invalid message tag : '{tag}'\t must be 'received' or 'sended'.")
 
         self.messages_box['state'] = 'normal'
-        self.messages_box.insert('end', msg + '\n', tag)
+        self.messages_box.insert('end', str(msg) + '\n', tag)
         self.messages_box['state'] = 'disabled'
         self.messages_box.see('end')
 
@@ -172,7 +172,7 @@ class GroundGUI(tk.Tk):
         self.lora.ask_for_picture()
         self.file_transfert_txt.set("Transfering file ...")
         self.picture_button["text"] = "Cancel tranfert"
-        self.picture_button["command"] = self.lora.stop_file_transfert
+        self.picture_button["command"] = lambda : self.lora.stop_file_transfert(); self.reset_file_transfert_frame()
     
     def update_file_progressbar(self, percent):
         self.transfer_progressbar['value'] = percent

@@ -9,7 +9,7 @@
 import time
 from queue import Queue
 from threading import Thread, Timer
-from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
+from LoRa_class import LoRa
 
 
 
@@ -33,7 +33,7 @@ class LoRaGround():
 
         # init message queue and callbacks
         self.message_queue = Queue()
-        self.callbacks = {"gps" : self.gps_callback}   
+        self.callbacks = {"gps" : self._handle_gps}   
         self.external_observers = {"gps_update": [],            # list of functions to call in the UI for each event
                                    "new_message_received": [],
                                    "new_message_sent": [],
@@ -132,19 +132,24 @@ class LoRaGround():
 
     def _handle_file_info(self, message):
         """Callback for the 'file_info' message type."""
+        del self.callbacks["file_info"]
+        self.timeout_timer.cancel()
+        
         # initialise the variables for the file transmission
         self.nb_of_packets = message
         self.packets_list = [None] * self.nb_of_packets
         self.logger.info(f"Nombre de paquets à transférer : {self.nb_of_packets}")
 
         # remove callback and ask for the first packet
-        del self.callbacks["file_info"]
+        
+        self.current_packet_index = 0
         self._ask_for_file_packet(0)
 
     def _ask_for_file_packet(self, packet_index, number_of_try=0):
         """Ask for a specific packet and set a timeout."""
 
         # send LoRa message and set callback for the response 'file_packet'
+        self.current_packet_index = packet_index
         self._send_message(packet_index, "ask_for_file_packet")
         self.callbacks["file_packet"] = self._handle_file_packet
 
@@ -235,15 +240,15 @@ class LoRaGround():
 
     def add_observer(self, event_type, observer):
         """Ajoute un callback pour un type d'événement donné."""
-        if event_type in self.observers:
+        if event_type in self.external_observers:
             self.external_observers[event_type].append(observer)
         else:
             self.logger.error(f"Unknown event type : {event_type}.")
 
     def _notify_observers(self, event_type, data):
         """Notifie tous les callbacks enregistrés pour un type d'événement."""
-        if event_type in self.observers:
-            for observer in self.observers[event_type]:
+        if event_type in self.external_observers:
+            for observer in self.external_observers[event_type]:
                 observer(data)
 
 

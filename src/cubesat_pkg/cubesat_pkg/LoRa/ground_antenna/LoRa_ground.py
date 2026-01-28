@@ -182,8 +182,7 @@ class LoRaGround():
         # stop file transfert if max number of try reached
         else:
             self.logger.error(f"Max number of try reached for packet {packet_index}. Aborting file transfert.")
-            self._notify_observers("file_transfert_end", "Abort")
-            self.stop_file_transfert()
+            self.stop_file_transfert(success=False)
 
     def _handle_file_packet(self, message):
         """Callback for the file packet message. Save the packet and ask for the next one if not all packets are received."""
@@ -211,10 +210,12 @@ class LoRaGround():
                 f.write(packet)
         self.logger.info(f"Fichier {self.file_name} enregistré.")
 
-        self._notify_observers("file_transfert_end", "Success")
-        self.stop_file_transfert()
+        
+        self.stop_file_transfert(success=True)
 
-    def stop_file_transfert(self):
+    def stop_file_transfert(self, success = False):
+        self._notify_observers("file_transfert_end", success)
+
         if "file_info" in self.callbacks:
             del self.callbacks["file_info"]
         if "file_packet" in self.callbacks:

@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext
 from tkinter.ttk import LabelFrame, Label, Button, Progressbar
 import time
-from LoRa_ground import LoRaGround
+#from LoRa_ground import LoRaGround
 
 
 
@@ -16,7 +16,7 @@ class GroundGUI(tk.Tk):
         self.root.configure(bg="#f5f5f5")
         self.create_widgets()
 
-
+        """
         self.lora = LoRaGround() 
 
         # create LoRa callbacks listeners
@@ -26,7 +26,8 @@ class GroundGUI(tk.Tk):
         self.lora.add_observer("new_log", self.add_log)
         self.lora.add_observer("file_transfert_percent", self.update_file_progressbar)
         self.lora.add_observer("file_transfert_end", self.end_transmission)
-
+        """
+    ###################################################################################################### 
 
         
     def create_widgets(self):
@@ -119,6 +120,7 @@ class GroundGUI(tk.Tk):
         # initialise the file transfert frame (names, values, ...)
         self.reset_file_transfert_frame()
 
+    ###################################################################################################### 
 
     def add_history(self, msg, tag:str):
         if tag not in ["received", "sended"]: raise ValueError(f"Invalid message tag : '{tag}'\t must be 'received' or 'sended'.")
@@ -153,6 +155,7 @@ class GroundGUI(tk.Tk):
         self.logs_box.delete('1.0', 'end')
         self.logs_box['state'] = 'disabled'
 
+    ###################################################################################################### 
 
     def update_gps(self, gps_data):
         self.gps_status_txt.set(str(gps_data["status"]))
@@ -161,7 +164,7 @@ class GroundGUI(tk.Tk):
         self.alt_var.set(str(gps_data["altitude"]))
         self.gps_last_update_txt.set(f"({round(time.time() - gps_data['last_update'])} s ago)")
 
-
+    ###################################################################################################### 
     def reset_file_transfert_frame(self):
         self.transfer_progressbar['value'] = 0
         self.picture_button["text"] = "Ask for picture"
@@ -172,17 +175,19 @@ class GroundGUI(tk.Tk):
         self.lora.ask_for_picture()
         self.file_transfert_txt.set("Transfering file ...")
         self.picture_button["text"] = "Cancel tranfert"
-        self.picture_button["command"] = lambda : self.lora.stop_file_transfert(); self.reset_file_transfert_frame()
+        self.picture_button["command"] = self.lora.stop_file_transfert
     
     def update_file_progressbar(self, percent):
         self.transfer_progressbar['value'] = percent
 
-    def end_transmission(self, message):
-        if message == "success":
+    def end_transmission(self, message:bool):
+        success = message
+        if success:
             self.file_transfert_txt.set("File received successfully")
-        elif message == "abort":
+        else :
             self.file_transfert_txt.set("File transfert abort")
         self.reset_file_transfert_frame()
+    ###################################################################################################### 
 
 
 if __name__ == "__main__":

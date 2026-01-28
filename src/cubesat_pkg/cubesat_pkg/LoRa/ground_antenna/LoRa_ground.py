@@ -11,20 +11,6 @@ from queue import Queue
 from threading import Thread, Timer
 from cubesat_pkg.LoRa.utils.LoRa_class import LoRa
 
-##############################################################################################
-
-
-class Just_Print_Logger():
-    """ This logger just prints messages to the console without raising exceptions. 
-    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
-    def info(self, msg):
-        print(f"[INFO]  {msg}")
-
-    def warn(self, msg):
-        print(f"[WARN]  {msg}")
-
-    def error(self, msg):
-        print(f"[ERROR] {msg}")
 
 
 ##############################################################################################
@@ -51,7 +37,9 @@ class LoRaGround():
         self.external_observers = {"gps_update": [],            # list of functions to call in the UI for each event
                                    "new_message_received": [],
                                    "new_message_sent": [],
-                                   "new_log": []}
+                                   "new_log": [],
+                                   "file_transfert_end":[],
+                                   "file_transfert_percent":[]}
 
         # init threads
         self.running = True
@@ -124,18 +112,23 @@ class LoRaGround():
         self.nb_of_packets = -1
         self.current_packet_index = -1
         self.packets_list = []
+        self.compression_factor = 10
 
-    def ask_for_picture(self, compression_factor=50):
+    def ask_for_picture(self, compression_factor=50, number_of_try=0):
         """
         Ask the cubesat to send a picture.
         """
         # stop current file transfert and initialise a new one
         self.stop_file_transfert()
         self.file_name = "picture.jpg"
+        self.compression_factor = compression_factor
 
         # send request via LoRa and set callback for the response 'file_info'
         self._send_message(compression_factor, "ask_for_picture")
         self.callbacks["file_info"] = self._handle_file_info
+
+        self.timeout_timer = Timer(self.file_transfert_timeout, self._on_file_transfert_timeout, args=[-1, number_of_try])
+        self.timeout_timer.start()
 
     def _handle_file_info(self, message):
         """Callback for the 'file_info' message type."""
@@ -150,15 +143,18 @@ class LoRaGround():
 
     def _ask_for_file_packet(self, packet_index, number_of_try=0):
         """Ask for a specific packet and set a timeout."""
+
         # send LoRa message and set callback for the response 'file_packet'
         self._send_message(packet_index, "ask_for_file_packet")
         self.callbacks["file_packet"] = self._handle_file_packet
 
+        self._notify_observers("file_transfert_percent", packet_index/self.nb_of_packets)
+
         # start a timeout timer
-        self.timeout_timer = Timer(self.file_transfert_timeout, self._on_packet_timeout, args=[packet_index, number_of_try])
+        self.timeout_timer = Timer(self.file_transfert_timeout, self._on_file_transfert_timeout, args=[packet_index, number_of_try])
         self.timeout_timer.start()
 
-    def _on_packet_timeout(self, packet_index, number_of_try):
+    def _on_file_transfert_timeout(self, packet_index, number_of_try):
         """Callback for the timeout timer. Start if no packet is received in time. Run _ask_for_file_packet again."""
         # remove callback and stop timer
         self.logger.warn(f"Timeout ! Packet n°{packet_index} not received.")
@@ -167,12 +163,21 @@ class LoRaGround():
 
         # retry if max number of try not reached
         if number_of_try < self.max_number_of_try:
-            self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for packet {packet_index}")
-            self._ask_for_file_packet(packet_index, number_of_try+1)
+
+            # if packet_index is -1, it means that the file info was not received
+            if packet_index == -1:
+                self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for file info.")
+                self.ask_for_picture(self.compression_factor, number_of_try+1)
+
+            # else ask for the packet again
+            else:
+                self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for packet {packet_index}.")
+                self._ask_for_file_packet(packet_index, number_of_try+1)
         
         # stop file transfert if max number of try reached
         else:
             self.logger.error(f"Max number of try reached for packet {packet_index}. Aborting file transfert.")
+            self._notify_observers("file_transfert_end", "Abort")
             self.stop_file_transfert()
 
     def _handle_file_packet(self, message):
@@ -200,6 +205,9 @@ class LoRaGround():
             for packet in self.packets_list:
                 f.write(packet)
         self.logger.info(f"Fichier {self.file_name} enregistré.")
+
+        self._notify_observers("file_transfert_end", "Success")
+        self.stop_file_transfert()
 
     def stop_file_transfert(self):
         if "file_info" in self.callbacks:
@@ -265,6 +273,18 @@ class ExternalLogger:
         print(f"[FATAL] {msg}")
         self.lora._notify_observers("new_log", f"[FATAL] {msg}")
 
+
+class Just_Print_Logger():
+    """ This logger just prints messages to the console without raising exceptions. 
+    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
+    def info(self, msg):
+        print(f"[INFO]  {msg}")
+
+    def warn(self, msg):
+        print(f"[WARN]  {msg}")
+
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
 
 
 if __name__ == '__main__':

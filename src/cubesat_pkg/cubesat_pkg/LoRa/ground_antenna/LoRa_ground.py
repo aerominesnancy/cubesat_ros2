@@ -153,8 +153,6 @@ class LoRaGround():
         self._send_message(packet_index, "ask_for_file_packet")
         self.callbacks["file_packet"] = self._handle_file_packet
 
-        self._notify_observers("file_transfert_percent", packet_index/self.nb_of_packets)
-
         # start a timeout timer
         self.timeout_timer = Timer(self.file_transfert_timeout, self._on_file_transfert_timeout, args=[packet_index, number_of_try])
         self.timeout_timer.start()
@@ -198,8 +196,10 @@ class LoRaGround():
 
         # ask for the next packet if not all packets are received
         if None not in self.packets_list:
+            self._notify_observers("file_transfert_percent", 100)
             self._end_file_transmission()
         else:
+            self._notify_observers("file_transfert_percent", 100*packet_index/self.nb_of_packets)
             next_packet = self.packets_list.index(None)
             self._ask_for_file_packet(next_packet)
 

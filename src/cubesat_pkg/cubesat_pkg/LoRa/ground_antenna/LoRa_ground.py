@@ -92,7 +92,7 @@ class LoRaGround():
         Send a message to the cubesat.
         """
         self.lora.send_message(message, msg_type)
-        self._notify_observers("new_message_sended", (msg_type,message, None))
+        self._notify_observers("new_message_sent", (msg_type,message, None))
 
     def close_radio(self):
         """

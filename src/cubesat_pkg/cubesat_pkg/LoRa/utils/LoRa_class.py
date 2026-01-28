@@ -109,9 +109,9 @@ class LoRa():
 
     def send_message(self, message, message_type:str):
         encapsulation = self.encapsulate(message, message_type)
-        self.logger.info(f"[loRa_Class.py] Sending {message_type} : {message}")
 
         if encapsulation is not None:
+            self.logger.info(f"[loRa_Class.py] Sending {message_type} : {message}")
             checksum, bytes_message = encapsulation
             self.send_bytes(bytes_message)
             return checksum
@@ -216,11 +216,11 @@ def encapsulate(message, msg_type:str,type_to_id, max_data_size, START_MARKER, E
             return None
         
     elif msg_type == "file_packet":
-        if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message[1], bytes):
+        if isinstance(message, tuple) and len(message)==2 and isinstance(message[0], int) and isinstance(message[1], bytearray):
             packet_index, packet_data = message
             data_bytes = struct.pack(">H", packet_index) + packet_data
         else:
-            logger.error(f"[loRa_Class.py] Le message doit être un tuple (int, bytes) pour l'encapsulation de type 'file_packet'. Message actuel : (type : {type(message)}) {message}")
+            logger.error(f"[loRa_Class.py] Le message doit être un tuple (int, bytearray) pour l'encapsulation de type 'file_packet'. Message actuel : (type : {type(message)}) {message}")
             return None
 
     elif msg_type == "file_info":

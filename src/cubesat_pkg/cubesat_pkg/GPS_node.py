@@ -1,11 +1,15 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatFix, NavSatStatus
+# ros2 interface show sensor_msgs/msg/NavSatFix
 
 from datetime import datetime, timezone # to convert UTC time to timestamp
 import time
 import serial
+
 """
+https://www.coordonnees-gps.fr/
+
 The module uses NEO-6M chip. It currently send NMEA0183 messages : 
 RMC, VTG GGA, GSA, GSV(several times), GLL messages (in this order)
 and one binary message (certainly UBX) that is not decoded yet.
@@ -17,8 +21,6 @@ https://fr.wikipedia.org/wiki/NMEA_0183
 """
 # ===============================================================================
 # all fields end with "\r\n" (CR-LF)
-
-
 
 GPRMC_FIELDS = [
     "utc_time",             # hhmmss.ss
@@ -139,7 +141,7 @@ class GPS(Node):
             self.nmea = None
 
             #timer and publisher
-            self.publisher = self.create_publisher(NavSatFix, 'gps_data', 1)
+            self.publisher = self.create_publisher(NavSatFix, '/gps/data', 1)
             self.timer = self.create_timer(callback_delay_second, self.send_gps_data)
 
             self.get_logger().info('GPS node has been started.')
@@ -153,10 +155,26 @@ class GPS(Node):
         if self.nmea["RMC"][1] == "A":
             self.get_logger().info(f'GPS data decoded and valid.')
             self.print_gps_data_for_user()
-            self.get_logger().warn("No publication on ros2 topic for the moment".upper())
+            
+            # convert position
+            latitude, longitude, altitude = self.convert_to_decimal_degrees(
+                self.nmea["RMC"][3].strip(), self.nmea["RMC"][2], # latitude  direction / latitude
+                self.nmea["RMC"][5].strip(), self.nmea["RMC"][4], # longitude direction / longitude
+                self.nmea["GGA"][8])                              # altitude
+            
+            # publish data
+            self.publisher.publish(NavSatFix(
+                status = NavSatStatus(status=NavSatStatus.STATUS_FIX),
+                latitude = latitude,
+                longitude = longitude,
+                altitude = altitude))
 
         else:
             self.get_logger().warn(f'GPS data decoded but invalid : No satellites in view, try moving gps module.')
+            self.publisher.publish(NavSatFix(
+                status = NavSatStatus(status=NavSatStatus.STATUS_NO_FIX)))
+        
+        self.get_logger().info(f"GPS data published on topic : '/gps/data'")
               
         
     def read_gps_data(self):
@@ -248,7 +266,7 @@ class GPS(Node):
         lat_dir = nmea["RMC"][3]
         longitude = nmea["RMC"][4]
         long_dir = nmea["RMC"][5]
-        latitude, longitude = self.convert_geolocalisation(latitude, longitude)
+        latitude, longitude = self.convert_to_degrees_minutes_seconds(latitude, longitude)
         h_precision = nmea["GSA"][15]
         h_precision = '?' if h_precision=='1.0' else h_precision
 
@@ -266,15 +284,29 @@ class GPS(Node):
         self.get_logger().info(f"============= GPS data ============\n"
             f"ATOMIC CLOCKS : \t utc: {time[:2]}:{time[2:4]}:{time[4:6]} \t date: {date} \t timestamp:{timestamp}\n"
             f"number of satellites : {num_sat}\t\t fix quality : {fix_quality}\t\t fix type : {fix_type}\n"
-            f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (precision: {h_precision})\n"
-            f"altitude : {altitude}MSL (precision: {v_precision})\n"
+            f"latitude : {lat_dir}{latitude}\t\tlongitude : {long_dir}{longitude} \t\t (dilution of precision : {h_precision})\n"
+            f"altitude : {altitude}MSL (dilution of precision : {v_precision})\n"
             f"velocity : {speed}km/h\t\t direction : {course_angle}° (compare to true North)"
             )
         
         
-    def convert_geolocalisation(self, latitude, longitude):
-        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}''" ,
-                f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}''")
+    def convert_to_degrees_minutes_seconds(self, latitude, longitude):
+        return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}\"" ,
+                f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}\"")
+    
+    def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude, altitude):
+        # change sign (East/West and North/South)
+        lat_sign = 1 if lat_dir=="N" else -1
+        long_sign = 1 if long_dir=="E" else -1
+
+        # Convert "degrees and minutes" to "decimal degrees"
+        lat  = round(float(latitude[:2])  + float(latitude[2:])  / 60, 4) # 4 decimals ~ 10m precision
+        long = round(float(longitude[:3]) + float(longitude[3:]) / 60, 4)
+
+        # Convert altitude
+        alt = float(altitude)
+
+        return lat_sign*lat, long_sign*long, alt 
 
 
     def extract_timestamp(self, nmea):

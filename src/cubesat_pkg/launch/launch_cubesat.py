@@ -7,12 +7,11 @@ from launch_ros.actions import Node
 
 import os
 # change log format
-os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '\t{time} [{severity}] [{name}] \t{message}'
-
+#os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '    \t{time} [{severity}][{name}] \t{message}'
+os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '    \t[{severity}]  [{name}]   \t{message}'
 
 # This function is always needed
 def generate_launch_description():
-  SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1'),
   
   # Declare a variable Node for each node
   imu_node = Node(
@@ -30,7 +29,7 @@ def generate_launch_description():
   temp_hum_node_1 = Node(
     package="cubesat_pkg",
     executable="temp_hum_node",
-    name="temp_hum_sensor_1",
+    name="temp_hum_1",
     parameters=[{'sensor_id': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
   )
 
@@ -46,17 +45,32 @@ def generate_launch_description():
     parameters=[{'loop_delay_milisecond':10,'M0_pin': 17, 'M1_pin': 27, 'AUX_pin': 22}]
   )
 
+  heater_node_1 = Node(
+    package="cubesat_pkg",
+    executable="heater_node",
+    parameters=[{'heater_id': 1, 'pwm_pin': 18}]
+  )
+
+  gps_node = Node(
+    package="cubesat_pkg",
+    executable="gps_node",
+    parameters=[{'callback_delay_second': 2.0}]
+  )
+
+
   # Add the nodes and the process to the LaunchDescription list
-  ld = [imu_node, motor_node,temp_hum_node_1, camera_node, lora_node]
+  ld = [imu_node, motor_node, temp_hum_node_1, heater_node_1, gps_node, camera_node, lora_node]
+
   return LaunchDescription(ld)
 
 
 """
-Sur le pi, on récupère maintenant les modifications du git et on reconstruit l'environnement ros2
+Sur le pi, on récupère maintenant les modifications du git et on reconstruit l'environnement ros2:
+
 cd ~/ros2_ws
-git reset -hard 	# reset le pi pour eviter les conflit 
-git pull		# git pull origin "other_branch" 
+git reset -hard 
+git pull	origin paul
 colcon build	
-# colcon build --symlink-install 	# permet d'auto build les programmes déjà présent sur le pi (qui sont uniquement modifié) (pour la session en cours)
-source ~/.bashrc  	# si jamais le programme n'est pas detecté
+colcon build --symlink-install 	
+source ~/.bashrc 
 """

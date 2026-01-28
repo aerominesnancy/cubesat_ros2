@@ -7,161 +7,294 @@
 # ===================================================================
 
 import time
-import threading
-import RPi.GPIO as GPIO
-from LoRa_class import LoRa, Just_Print_Logger
-
-     
-# Initialize LoRa module with GPIO pins and timeouts
-logger = Just_Print_Logger()
-lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=logger)
-
-"""
-# Thread to continuously receive messages
-def receive_loop():
-    while True:
-        lora.listen_radio()
-        msg = lora.extract_message(remove_from_buffer = False)
-        if msg is not None:
-            msg_type, message, _ = msg
-            logger.info(f"Message received (type : {msg_type}) : {message}")
-
-        time.sleep(0.1)
-
-receiver_thread = threading.Thread(target=receive_loop, daemon=True)
-receiver_thread.start()
-"""
+from queue import Queue
+from threading import Thread, Timer
+from LoRa_class import LoRa
 
 
-def wait_for_msg_type(message_type, timeout_s=5):
-    start = time.time()
-    logger.info(f"Waiting for message of type : {message_type}")
 
-    while time.time()-start < timeout_s:
-        lora.listen_radio()
-        msg = lora.extract_message()
+##############################################################################################
+##############################################################################################
+
+
+class LoRaGround():
+
+    def __init__(self, logger=None):
+        # init LoRa
+        self.logger = logger if logger else ExternalLogger(self) # use the UILogger if no logger is provided
+        self.lora = LoRa(M0_pin=17, M1_pin=27, AUX_pin=22, logger=self.logger)
+
+        # init variables
+        self.gps_data = {"last_update":0.0, "status":-1, "latitude":0.0, "longitude":0.0, "altitude":0.0}
+
+        self._reset_file_transfert()
+        self.file_transfert_timeout = 5 # sec
+        self.max_number_of_try = 5
+
+        # init message queue and callbacks
+        self.message_queue = Queue()
+        self.callbacks = {"gps" : self._handle_gps}   
+        self.external_observers = {"gps_update": [],            # list of functions to call in the UI for each event
+                                   "new_message_received": [],
+                                   "new_message_sent": [],
+                                   "new_log": [],
+                                   "file_transfert_end":[],
+                                   "file_transfert_percent":[]}
+
+        # init threads
+        self.running = True
+        self.receiver_thread = Thread(target=self._receive_loop, daemon=True)
+        self.receiver_thread.start()    
+        self.processor_thread = Thread(target=self._process_messages, daemon=True)
+        self.processor_thread.start() 
+
+        self.logger.info("LoRaGround initialized")
+
+    ##################################### main functions #####################################
+    def _receive_loop(self):
+        """
+        This function is called in a separate thread.
+        It listens to the radio, extract the messages from buffer and puts the messages in a queue 'self.message_queue'.
+        """
+        while self.running:
+
+            # listen read and exctract message from LoRa buffer
+            self.lora.listen_radio()
+            msg = self.lora.extract_message(remove_from_buffer=True)
+
+            # if a message is available, put it in the queue
+            if msg is not None:
+                self.message_queue.put(msg)
+                self._notify_observers("new_message_received", msg)
+
+            time.sleep(0.1)
+
+    def _process_messages(self):
+        """
+        This function is called in a separate thread.
+        It processes the messages in the queue 'self.message_queue'.
+        """
+        while self.running:
+
+            # if a message is available in queue, process it
+            if not self.message_queue.empty():
+                msg_type, message, checksum = self.message_queue.get()
+                self.logger.info(f"Message traité (type : {msg_type}) : {message}")
+
+
+                if msg_type in self.callbacks and self.callbacks[msg_type]:
+                    self.callbacks[msg_type](message)
+
+            time.sleep(0.1)
+
+    def _send_message(self, message, msg_type):
+        """
+        Send a message to the cubesat.
+        """
+        self.lora.send_message(message, msg_type)
+        self._notify_observers("new_message_sent", (msg_type,message, None))
+
+    def close_radio(self):
+        """
+        This function is called to stop all threads and close the radio.
+        """
+        self.running = False
+        self.receiver_thread.join()
+        self.processor_thread.join()
+        self.lora.close()
+
+    ################################ file transfert functions ################################
+    def _reset_file_transfert(self):
+        """
+        Sets the file transfert variables to their default values.
+        """
+        self.file_name = "name.txt"
+        self.nb_of_packets = -1
+        self.current_packet_index = -1
+        self.packets_list = []
+        self.compression_factor = 10
+
+    def ask_for_picture(self, compression_factor=50, number_of_try=0):
+        """
+        Ask the cubesat to send a picture.
+        """
+        # stop current file transfert and initialise a new one
+        self.stop_file_transfert()
+        self.file_name = "picture.jpg"
+        self.compression_factor = compression_factor
+
+        # send request via LoRa and set callback for the response 'file_info'
+        self._send_message(compression_factor, "ask_for_picture")
+        self.callbacks["file_info"] = self._handle_file_info
+
+        self.timeout_timer = Timer(self.file_transfert_timeout, self._on_file_transfert_timeout, args=[-1, number_of_try])
+        self.timeout_timer.start()
+
+    def _handle_file_info(self, message):
+        """Callback for the 'file_info' message type."""
+        del self.callbacks["file_info"]
+        self.timeout_timer.cancel()
         
-        if msg is not None:
-            msg_type, message, checksum = msg
+        # initialise the variables for the file transmission
+        self.nb_of_packets = message
+        self.packets_list = [None] * self.nb_of_packets
+        self.logger.info(f"Nombre de paquets à transférer : {self.nb_of_packets}")
+
+        # remove callback and ask for the first packet
         
-            if msg_type == message_type:
-                logger.info(f"Message de type {message_type} reçu, attente terminée.")
-                return message, checksum
+        self.current_packet_index = 0
+        self._ask_for_file_packet(0)
+
+    def _ask_for_file_packet(self, packet_index, number_of_try=0):
+        """Ask for a specific packet and set a timeout."""
+
+        # send LoRa message and set callback for the response 'file_packet'
+        self.current_packet_index = packet_index
+        self._send_message(packet_index, "ask_for_file_packet")
+        self.callbacks["file_packet"] = self._handle_file_packet
+
+        # start a timeout timer
+        self.timeout_timer = Timer(self.file_transfert_timeout, self._on_file_transfert_timeout, args=[packet_index, number_of_try])
+        self.timeout_timer.start()
+
+    def _on_file_transfert_timeout(self, packet_index, number_of_try):
+        """Callback for the timeout timer. Start if no packet is received in time. Run _ask_for_file_packet again."""
+        # remove callback and stop timer
+        self.logger.warn(f"Timeout ! Packet n°{packet_index} not received.")
+        self.callbacks["file_packet"] = None
+        self.timeout_timer.cancel()
+
+        # retry if max number of try not reached
+        if number_of_try < self.max_number_of_try:
+
+            # if packet_index is -1, it means that the file info was not received
+            if packet_index == -1:
+                self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for file info.")
+                self.ask_for_picture(self.compression_factor, number_of_try+1)
+
+            # else ask for the packet again
             else:
-                logger.info(f"Message d'un autre type reçu (type : {msg_type}) : {message}")
-            
-    logger.warn(f"Timeout warning : Aucun message de type '{message_type}' reçu.")
-    return None
-
-
-
-def ask_for_file_transmission(file_path):
-    lora.send_message(file_path, "ask_for_file_transmission")
-
-    msg = wait_for_msg_type("file_info")
-    if msg == None:
-        lora.logger.error("Aucune réponse pour la demande de transmission. Demande annulée.")
-        return
-    nb_of_paquets, _ = msg
-
-    lora.logger.info(f"Nombre de paquets a transférer pour le fichier demandé : {nb_of_paquets}")
-    return nb_of_paquets
-
-
-def ask_for_paquet(paquet_index):
-    lora.send_message(paquet_index, "ask_for_file_paquet")
-
-    msg = wait_for_msg_type("file_paquet")
-    if msg == None:
-        logger.error("Aucune réponse pour la demande de paquet. Demande annulée.")
-        return
-
-    paquet_msg, _ = msg
-    paquet_index_received, paquet_data = paquet_msg
-
-    if paquet_index_received == paquet_index:
-        logger.info(f"Reception du paquet {paquet_index}")
-        return paquet_data
-    else:
-        logger.warn("Mauvais paquet reçu, attente de la prochaine reception...")
-
-
-
-# demande de transmission et attente de l'indication du nombre de paquets
-nb_of_paquets = None
-while nb_of_paquets == None:
-    nb_of_paquets = ask_for_file_transmission("/home/cubesat/ros2_ws/pictures/last_picture.jpg")
-
-# demande de paquets et attente de reception
-file_data = b''
-for index in range(nb_of_paquets):
-    paquet = None
-    while paquet == None:
-        paquet = ask_for_paquet(index)
-    file_data += paquet
-
-# reconstruction du fichier
-with open("fichier_transmis.jpg", 'wb') as new_file:
-    new_file.write(file_data)
-
-
-lora.close()
-
-
-"""
-    def send_and_wait_ACK(self, checksum, data_bytes, number_of_try=10):
-        ACK_received = False
-
-        checksum, data_bytes = data_bytes
-        self.send_bytes(data_bytes)
-        ACK_received = self.wait_ACK(checksum)
+                self.logger.info(f"Retry number {number_of_try+1}/{self.max_number_of_try} for packet {packet_index}.")
+                self._ask_for_file_packet(packet_index, number_of_try+1)
         
-        for i in range(2, number_of_try+1):
-            if ACK_received:
-                break
-            self.logger.warn(f"No ACK received. Message sended again (try {i+2}/{number_of_try}). Please wait...")
-            checksum, data_bytes = data_bytes
-            self.send_bytes(data_bytes)
-            ACK_received = self.wait_ACK(checksum)
-            
+        # stop file transfert if max number of try reached
+        else:
+            self.logger.error(f"Max number of try reached for packet {packet_index}. Aborting file transfert.")
+            self.stop_file_transfert(success=False)
 
-"""
+    def _handle_file_packet(self, message):
+        """Callback for the file packet message. Save the packet and ask for the next one if not all packets are received."""
+        # check if the packet is the one we are waiting for
+        packet_index, packet_data = message
+        if packet_index != self.current_packet_index:
+            self.logger.warn(f"Received packet n°{packet_index} but waiting for n°{self.current_packet_index}. Ignoring.")
+            return
+        self.timeout_timer.cancel() # remove packet timeout if the packet is received
 
-"""
-# Thread to continuously receive messages
-def receive_loop():
-    while True:
-        lora.listen_radio()
-        msg_type, message = lora.extract_message()
-        if message is not None and msg_type!="picture":
-            print(f"[{time.strftime('%H:%M:%S')}] 📥 Reçu : {message}", flush=True)
+        # save the packet
+        self.packets_list[packet_index] = packet_data
+
+        # ask for the next packet if not all packets are received
+        if None not in self.packets_list:
+            self._notify_observers("file_transfert_percent", 100)
+            self._end_file_transmission()
+        else:
+            self._notify_observers("file_transfert_percent", 100*packet_index/self.nb_of_packets)
+            next_packet = self.packets_list.index(None)
+            self._ask_for_file_packet(next_packet)
+
+    def _end_file_transmission(self):
+        self.logger.info("Transfert de fichier terminé.")
+        with open(self.file_name, 'wb') as f:
+            for packet in self.packets_list:
+                f.write(packet)
+        self.logger.info(f"Fichier {self.file_name} enregistré.")
+
         
-        if msg_type == "picture":
-            print("Image reçu")
-            print(message)
+        self.stop_file_transfert(success=True)
 
-        time.sleep(0.1)
+    def stop_file_transfert(self, success = False):
+        self._notify_observers("file_transfert_end", success)
 
-receiver_thread = threading.Thread(target=receive_loop, daemon=True)
-receiver_thread.start()
+        if "file_info" in self.callbacks:
+            del self.callbacks["file_info"]
+        if "file_packet" in self.callbacks:
+            del self.callbacks["file_packet"]
+        if hasattr(self, 'timeout_timer'):
+            self.timeout_timer.cancel()
+
+        self._reset_file_transfert()
+
+    ################################## Other LoRa callbacks ###################################
+    def _handle_gps(self, message):
+        self.gps_data["status"] = message[0]
+        self.gps_data["latitude"] = message[1]
+        self.gps_data["longitude"] = message[2]
+        self.gps_data["altitude"] = message[3]
+        self.gps_data["last_update"] = time.time()
+
+        self.logger.info(f"GPS callback : {message}")
+        self._notify_observers("gps_update", self.gps_data)
 
 
-# test sending messages
-lora.send_bytes("test string", "string")
-time.sleep(1)
-lora.send_bytes(42, "int")
-time.sleep(1)
-lora.send_bytes(time.time(), "timestamp_update")
-time.sleep(1)
-lora.send_bytes(None, "picture_ask")
+    ############################# Create external callback for UI #############################
 
-print("End of main thread, quit with Ctrl+C to stop receiving.")
-while True:
-    try:
-        time.sleep(0.1)
-    except KeyboardInterrupt:
-        break
+    def add_observer(self, event_type, observer):
+        """Ajoute un callback pour un type d'événement donné."""
+        if event_type in self.external_observers:
+            self.external_observers[event_type].append(observer)
+        else:
+            self.logger.error(f"Unknown event type : {event_type}.")
 
-lora.close()
-"""
+    def _notify_observers(self, event_type, data):
+        """Notifie tous les callbacks enregistrés pour un type d'événement."""
+        if event_type in self.external_observers:
+            for observer in self.external_observers[event_type]:
+                observer(data)
+
+
+
+##############################################################################################
+##############################################################################################
+
+class ExternalLogger:
+    """Logger interne qui utilise _notify_observers de LoRaGround."""
+
+    def __init__(self, lora_instance:LoRaGround):
+        self.lora = lora_instance  # Référence à l'instance de LoRaGround
+
+    def info(self, msg):
+        print(f"[INFO]  {msg}")  # Optionnel : affiche dans la console
+        self.lora._notify_observers("new_log", f"[INFO]  {msg}")
+
+    def warn(self, msg):
+        print(f"[WARN]  {msg}")
+        self.lora._notify_observers("new_log", f"[WARN]  {msg}")
+
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
+        self.lora._notify_observers("new_log", f"[ERROR] {msg}")
+
+    def fatal(self, msg):
+        print(f"[FATAL] {msg}")
+        self.lora._notify_observers("new_log", f"[FATAL] {msg}")
+
+
+class Just_Print_Logger():
+    """ This logger just prints messages to the console without raising exceptions. 
+    It works like the ros2 logging system (there is no ros2 environment on the ground antenna). """
+    def info(self, msg):
+        print(f"[INFO]  {msg}")
+
+    def warn(self, msg):
+        print(f"[WARN]  {msg}")
+
+    def error(self, msg):
+        print(f"[ERROR] {msg}")
+
+
+if __name__ == '__main__':
+    lora = LoRaGround(Just_Print_Logger())
+    time.sleep(15)
+    lora.close_radio()
 

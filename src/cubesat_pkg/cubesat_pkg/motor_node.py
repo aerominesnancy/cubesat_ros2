@@ -24,14 +24,14 @@ class motor_GPIOWrapper:
         self.pin_pwm = pin_pwm
         self.pwm = GPIO.PWM(pin_pwm, 100) # fil jaune
         self.pwm.start(0)
-        GPIO.setup(self.pin, GPIO.OUT)
 
     def clockwise(self):
         GPIO.output(self.pin_R, GPIO.HIGH)
         GPIO.output(self.pin_L, GPIO.LOW)
 
     def counterClockwise(self):
-        GPIO.output(self.pin, GPIO.LOW)
+        GPIO.output(self.pin_L, GPIO.HIGH)
+        GPIO.output(self.pin_R, GPIO.LOW)
     
     def setpwm(self, pwm):
         self.pwm.ChangeDutyCycle(pwm)
@@ -53,15 +53,15 @@ class Motor(Node):
         pin_L = self.declare_parameter('pin_input_2', -1).value
         pin_pwm = self.declare_parameter('pwm_pin', -1).value
 
-        if self.pin_R == -1 or self.pin_L == -1 or self.pin_pwm == -1:
+        if pin_R == -1 or pin_L == -1 or pin_pwm == -1:
             self.get_logger().fatal("Motor GPIO pins must be set to valid pin numbers."
-                                    + f" Current values : pin_input_1={self.pin_R}, pin_input_2={self.pin_L}, pwm_pin={self.pin_pwm}")
+                                    + f" Current values : pin_input_1={pin_R}, pin_input_2={pin_L}, pwm_pin={pin_pwm}")
             self.get_logger().warn("Motor node is shutting down...")
             self.is_valid = False
 
         else:
             # subscription to Temperature data
-            self.imu_subscriber = self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
+            self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
 
             self.motor = motor_GPIOWrapper(pin_R, pin_L, pin_pwm)
 

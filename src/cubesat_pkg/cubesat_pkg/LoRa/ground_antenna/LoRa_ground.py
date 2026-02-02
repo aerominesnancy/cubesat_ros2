@@ -89,7 +89,7 @@ class LoRaGround():
 
     def _send_message(self, message, msg_type):
         """
-        Send a message to the cubesat.
+        Send a message to the cubesat and notify observers.
         """
         self.lora.send_message(message, msg_type)
         self._notify_observers("new_message_sent", (msg_type,message, None))
@@ -116,7 +116,7 @@ class LoRaGround():
 
     def ask_for_picture(self, compression_factor=50, number_of_try=0):
         """
-        Ask the cubesat to send a picture.
+        Ask the cubesat to send a picture and set a timeout timer.
         """
         # stop current file transfert and initialise a new one
         self.stop_file_transfert()
@@ -131,7 +131,9 @@ class LoRaGround():
         self.timeout_timer.start()
 
     def _handle_file_info(self, message):
-        """Callback for the 'file_info' message type."""
+        """
+        Callback for the 'file_info' message type.
+        """
         del self.callbacks["file_info"]
         self.timeout_timer.cancel()
         
@@ -146,7 +148,9 @@ class LoRaGround():
         self._ask_for_file_packet(0)
 
     def _ask_for_file_packet(self, packet_index, number_of_try=0):
-        """Ask for a specific packet and set a timeout."""
+        """
+        Ask for a specific packet and set a timeout.
+        """
 
         # send LoRa message and set callback for the response 'file_packet'
         self.current_packet_index = packet_index
@@ -158,7 +162,11 @@ class LoRaGround():
         self.timeout_timer.start()
 
     def _on_file_transfert_timeout(self, packet_index, number_of_try):
-        """Callback for the timeout timer. Start if no packet is received in time. Run _ask_for_file_packet again."""
+        """
+        Callback for the timeout timer.
+        Start if no response is received in time. 
+        Run ask_for_picture or _ask_for_file_packet again.
+        """
         # remove callback and stop timer
         self.logger.warn(f"Timeout ! Packet n°{packet_index} not received.")
         self.callbacks["file_packet"] = None
@@ -183,7 +191,10 @@ class LoRaGround():
             self.stop_file_transfert(success=False)
 
     def _handle_file_packet(self, message):
-        """Callback for the file packet message. Save the packet and ask for the next one if not all packets are received."""
+        """
+        Callback for the 'file_packet' message. 
+        Save the packet and ask for the next one if not all packets are received.
+        """
         # check if the packet is the one we are waiting for
         packet_index, packet_data = message
         if packet_index != self.current_packet_index:
@@ -204,6 +215,10 @@ class LoRaGround():
             self._ask_for_file_packet(next_packet)
 
     def _end_file_transmission(self):
+        """
+        This function is called when the file transmission is finished (all packets received).
+        It saves the file and notifies the observers.
+        """
         self.logger.info("Transfert de fichier terminé.")
         with open(self.file_name, 'wb') as f:
             for packet in self.packets_list:
@@ -214,6 +229,11 @@ class LoRaGround():
         self.stop_file_transfert(success=True)
 
     def stop_file_transfert(self, success = False):
+        """
+        This function stop the file transfert.
+        It remove all callbacks, timeout and reset file transfert data.
+        It also notify the observers if the filed stopped successfully or not.
+        """
         self._notify_observers("file_transfert_end", success)
 
         if "file_info" in self.callbacks:
@@ -227,6 +247,10 @@ class LoRaGround():
 
     ################################## Other LoRa callbacks ###################################
     def _handle_gps(self, message):
+        """
+        This function is the callback for 'gps' messages.
+        It extract data and send it to the observers.
+        """
         self.gps_data["status"] = message[0]
         self.gps_data["latitude"] = message[1]
         self.gps_data["longitude"] = message[2]
@@ -240,14 +264,20 @@ class LoRaGround():
     ############################# Create external callback for UI #############################
 
     def add_observer(self, event_type, observer):
-        """Ajoute un callback pour un type d'événement donné."""
+        """
+        Add an external callback to the observer list. 
+        - event_type : string - name of the event to observe
+        - observer : function - callback function
+        """
         if event_type in self.external_observers:
             self.external_observers[event_type].append(observer)
         else:
             self.logger.error(f"Unknown event type : {event_type}.")
 
     def _notify_observers(self, event_type, data):
-        """Notifie tous les callbacks enregistrés pour un type d'événement."""
+        """
+        Notify all observers of a specific event type with the provided data.
+        """
         if event_type in self.external_observers:
             for observer in self.external_observers[event_type]:
                 observer(data)
@@ -258,7 +288,9 @@ class LoRaGround():
 ##############################################################################################
 
 class ExternalLogger:
-    """Logger interne qui utilise _notify_observers de LoRaGround."""
+    """
+    Logger using the LoRaGround instance to notify observers.
+    """
 
     def __init__(self, lora_instance:LoRaGround):
         self.lora = lora_instance  # Référence à l'instance de LoRaGround

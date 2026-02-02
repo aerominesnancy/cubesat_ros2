@@ -31,11 +31,11 @@ class Heater(Node):
             # subscription to temperature data
             self.create_subscription(Temperature, f"/temp_hum_sensor_{self.heater_id}/temperature", self.temp_sensor_callback, 1)
 
-            # pwm moteur (choix de la vitesse de rotation)
+            # init GPIO
             GPIO.setmode(GPIO.BCM)
             GPIO.setwarnings(False)
             GPIO.setup(self.pin_pwm, GPIO.OUT)
-            self.pwm = GPIO.PWM(self.pin_pwm, 100) # fil jaune
+            self.pwm = GPIO.PWM(self.pin_pwm, 100)
             self.pwm.start(0)
 
             # log
@@ -43,14 +43,23 @@ class Heater(Node):
 
 
     def temp_sensor_callback(self, msg:Temperature):
+        """
+        This callback is called when a message is recieved on topic '/temp_hum_sensor_#/temperature'
+        It use the temperature information to chnage the pwm value of the heater.
+        """
         self.get_logger().info(f'Received form sensor n°{self.heater_id} : Temp = {msg.temperature}')
 
+        # THERE IS NO SCIENTIFIC REASON FOR THIS FORMULA, IT'S JUST A TEST
         pwm = min(100, 2*max(0, 50-msg.temperature))
+
         self.get_logger().info(f"Setting heater pwm to {pwm}%" )
         self.pwm.ChangeDutyCycle(pwm)
 
 
     def destroy_node(self):
+        """
+        Cleanup the GPIO pins when the node is destroyed.
+        """
         if self.is_valid:
             self.pwm.stop()
             GPIO.cleanup([self.pin_pwm])

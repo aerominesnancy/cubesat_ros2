@@ -41,6 +41,11 @@ class IMU(Node):
 
 
     def read_imu_data(self):
+        """
+        This function reads and saves the IMU data as a tuple (yaw, pitch, roll).
+        It returns True if the data is valid and within the expected range,
+        otherwise, it returns False.
+        """
         self.yaw, self.pitch, self.roll = self.sensor.euler
         
         if self.yaw is None or self.pitch is None or self.roll is None:
@@ -48,7 +53,8 @@ class IMU(Node):
             return False
         
         if 360 <= self.yaw and self.yaw <=370:
-            self.yaw -= 360 # correction d'une erreur courrante
+            # frequent error with the yaw value of the IMU sensor
+            self.yaw -= 360 
         elif not(0 <= self.yaw and self.yaw <= 360):
             self.get_logger().warn(f"IMU yaw data out of range : {self.yaw}")
             return False
@@ -64,6 +70,10 @@ class IMU(Node):
 
 
     def send_imu_data(self):
+        """
+        This function publish IMU data on the topic '/imu/orientation' as a Vector3 message.
+        It is launch by a timer created in the __init__ function.
+        """
         self.read_imu_data()
         
         if self.read_imu_data():

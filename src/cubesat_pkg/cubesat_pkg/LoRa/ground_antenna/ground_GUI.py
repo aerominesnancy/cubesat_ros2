@@ -17,17 +17,28 @@ class GroundGUI():
         self.root.configure(bg="#f5f5f5")
         self.create_widgets()
 
-        """
-        self.lora = LoRaGround() 
+        #self.lora = LoRaGround() 
+        #self.subsribe_observers()
+        
 
-        # create LoRa callbacks listeners
+    def subsribe_observers(self):
+        """
+        Create LoRa callbacks observers for each events
+        """
+        # when gps data is updated
         self.lora.add_observer("gps_update", self.update_gps)
+
+        # when message are received or sent
         self.lora.add_observer("new_message_received", lambda msg: self.add_history(msg, "received"))
         self.lora.add_observer("new_message_sent", lambda msg: self.add_history(msg, "sended"))
+
+        # when a logger 'ExternalLogger' is used by the lora
         self.lora.add_observer("new_log", self.add_log)
+
+        # when a file packet is received / when the transmission end (successfully or not)
         self.lora.add_observer("file_transfert_percent", self.update_file_progressbar)
         self.lora.add_observer("file_transfert_end", self.end_transmission)
-        """
+        
     ###################################################################################################### 
 
         
@@ -133,7 +144,9 @@ class GroundGUI():
     ###################################################################################################### 
 
     def add_history(self, msg, tag:str):
-        """This function only add last messages to the history listbox. (IT DOES NOT RUN ANY CALLBACK)"""
+        """
+        This function only add last messages to the history listbox. (IT DOES NOT RUN ANY CALLBACK)
+        """
         if tag not in ["received", "sended"]: raise ValueError(f"Invalid message tag : '{tag}'\t must be 'received' or 'sended'.")
         
         prefix = ">>" if tag == "received" else "<<"
@@ -159,6 +172,9 @@ class GroundGUI():
         self.messages_box.see('end')
 
     def add_log(self, log_msg):
+        """
+        This function add logs to the logs box.
+        """
         self.logs_box['state'] = 'normal'
         if "[INFO]" in log_msg:
             self.logs_box.insert('end', log_msg + '\n', "info")
@@ -186,6 +202,9 @@ class GroundGUI():
     ###################################################################################################### 
 
     def update_gps(self, gps_data):
+        """
+        Update the GPS data in the GUI and launch a timer to update time display on interface.
+        """
         if hasattr(self, 'gps_timer'):
             self.gps_timer.cancel()
         
@@ -210,6 +229,11 @@ class GroundGUI():
         self.gps_timer.start()
 
     def gps_update_timer(self):
+        """
+        This timer update 2 values:
+        gps_last_update_txt: time since last update received (even the gpsis not fixed)
+        gps_last_fix_txt:    time since last fix receive (fix = the gps know its position)
+        """
         self.gps_last_update_txt.set(f"{round(time.time() - self.gps_last_update)}s ago")
         self.gps_last_fix_txt.set(f"{round(time.time() - self.gps_last_fix)}s ago")
 
@@ -218,22 +242,37 @@ class GroundGUI():
         self.gps_timer.start()
 
     ###################################################################################################### 
+    
     def reset_file_transfert_frame(self):
+        """
+        Initialise texts and progressbar in the file transfert frame.
+        This function is called when the file transfert end (end_transmission function).
+        """
         self.transfer_progressbar['value'] = 0
         self.picture_button["text"] = "Ask for picture"
         self.picture_button["state"] = "enable"
         self.picture_button["command"] = self.picture_button_handler
 
     def picture_button_handler(self):
+        """
+        When the button is pressed the lora node is asked to send a picture.
+        Then the button is renamed to "Cancel transfert" and the command is changed to stop the transfert.
+        """
         self.lora.ask_for_picture()
         self.file_transfert_txt.set("Transfering file ...")
         self.picture_button["text"] = "Cancel tranfert"
         self.picture_button["command"] = self.lora.stop_file_transfert
     
     def update_file_progressbar(self, percent):
+        """
+        This function is launched via a callback. It update the progressbar.
+        """
         self.transfer_progressbar['value'] = percent
 
     def end_transmission(self, message:bool):
+        """
+        This function is launched via a callback. It reset the file transfert frame with a custom message.
+        """
         success = message
         if success:
             self.file_transfert_txt.set("File received successfully")
@@ -246,7 +285,7 @@ class GroundGUI():
 if __name__ == "__main__":
     app = GroundGUI()
 
-    ############# tests ################
+    ####################################### tests ##########################################
     app.add_history(("TEST MESSAGES", "testestestestestestestest", None), "sended")
     app.add_history(("ask_for_picture", 50, None), "sended")
     app.add_history(("file_info", 50, None), "received")
@@ -261,7 +300,7 @@ if __name__ == "__main__":
 
     app.update_file_progressbar(10)
     app.add_history(("TEST MESSAGES", "testestestestestestestest", None), "received")
-    ####################################
+    ########################################################################################
     app.root.mainloop()
 
     

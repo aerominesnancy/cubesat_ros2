@@ -148,6 +148,10 @@ class GPS(Node):
 
     
     def send_gps_data(self):
+        """
+        This function read the data from the gps and publish the data 
+        in a NavSatStatus message on topic '/gps/data'
+        """
         self.nmea = self.read_gps_data()
         if not self.nmea:
             return
@@ -179,7 +183,8 @@ class GPS(Node):
         
     def read_gps_data(self):
         """
-        messages order : RMC, VTG, GGA, GSA, GSV(several times), GLL, ubx binary
+        This function reads the GPS data from the serial port and returns the NMEA sentence.
+        The NMEA sentence is then parsed to extract the GPS data
         """
 
         try:
@@ -203,20 +208,24 @@ class GPS(Node):
 
 
     def read_buffer(self, NMEA_starter = b'$GPRMC', ubx_starter = b'\xb5b\x01\x03\x10\x00'):
-        """Reads the serial buffer and returns the latest NMEA message."""
+        """
+        Reads the serial buffer and returns the latest NMEA message.
+        The buffer is filled with messages in the following order:
+         RMC, VTG, GGA, GSA, GSV(several times), GLL, ubx binary
+        """
 
         # read gps buffer if available
         if self.ser.in_waiting == 0:
             return
         self.buffer += self.ser.read(self.ser.in_waiting)
         
-        # find the last ender
+        # find the last ender (ubx message)
         end_index = self.buffer.rfind(ubx_starter)
         if end_index == -1:
             # no ender found, wait until the next reading
             return
         
-        # find the last starter before this ender
+        # find the last starter (RMC message) before this ender
         start_index = self.buffer[:end_index].rfind(NMEA_starter)
         if start_index == -1:
             # no starter found, clear buffer before the ender
@@ -231,6 +240,11 @@ class GPS(Node):
 
 
     def parse_nmea_sentence(self, data):
+        """
+        This function take the nmea sentence extracted with 'read_buffer()'
+        parse it and create a dictionnary:
+        Each key is a message type (RMC, VTG, GGA, GSA, GSV, GLL)
+        """
         nmea = {"RMC":[], "VTG":[], "GGA":[], "GSA":[], "GSV":[], "GLL":[]}
 
         messages = data.split("$GP")
@@ -247,6 +261,9 @@ class GPS(Node):
     
 
     def print_gps_data_for_user(self):
+        """
+        This function use the ros2 logger to print the gps data in a readable way.
+        """
         nmea = self.nmea
 
         time = nmea["RMC"][0]
@@ -291,10 +308,20 @@ class GPS(Node):
         
         
     def convert_to_degrees_minutes_seconds(self, latitude, longitude):
+        """
+        Convert latitude and longitude in "degrees and minutes" to "degrees, minutes and seconds"
+        This function is used only for user visualisation.
+        It do not take into account the sign of the latitude and longitude (E/W and N/S)
+        """
         return (f"{int(latitude[:2])}°{int(latitude[2:4])}'{round(float(latitude[2:]) % 1 * 60, 2)}\"" ,
                 f"{int(longitude[:3])}°{int(longitude[3:5])}'{round(float(longitude[3:]) % 1 * 60,2)}\"")
     
     def convert_to_decimal_degrees(self, lat_dir, latitude, long_dir, longitude, altitude):
+        """
+        Convert latitude and longitude in "degrees and minutes" to "decimal degrees"
+        This fonction is used to create the ros2 NavSatFix message by
+        converting latitude, longitude and altitude into floats.
+        """
         # change sign (East/West and North/South)
         lat_sign = 1 if lat_dir=="N" else -1
         long_sign = 1 if long_dir=="E" else -1
@@ -309,7 +336,12 @@ class GPS(Node):
         return lat_sign*lat, long_sign*long, alt 
 
 
-    def extract_timestamp(self, nmea):
+    def extract_timestamp(self, nmea:dict):
+        """
+        Given the NMEA dictionnary, this function convert the time readed by the gps
+        to an informatic timestamp.
+        This may be use to synchronise the cubesat without internet network access.
+        """
         time_str = nmea["RMC"][0]
         date_str = nmea["RMC"][8]
 
@@ -331,7 +363,7 @@ class GPS(Node):
             tzinfo=timezone.utc
         )
 
-        return round(dt.timestamp(),2)
+        return round(dt.timestamp(),3)
 
     
 

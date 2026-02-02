@@ -56,16 +56,24 @@ class lora(Node):
             self.get_logger().info('lora node has been started.')
         
     def send_gps_position(self, msg):
+        """
+        Launched when a new GPS position is received through the topic '/gps/data'.
+        It sends the GPS position to the ground station via LoRa.
+        """
         status = msg.status.status
         latitude = msg.latitude
         longitude = msg.longitude
         altitude = msg.altitude
         
+        # send GPS position to ground station
         self.get_logger().info(f"GPS position received (status={status}): lat={latitude} long={longitude} alt={altitude}")
-        
         self.lora.send_message((status, latitude, longitude, altitude), "gps")
 
     def loop(self):
+        """
+        ROS2 loop.
+        It read buffer, extract message, if available send ACK and handle the message.
+        """
         # recover any incoming messages
         self.lora.listen_radio()
         
@@ -78,19 +86,34 @@ class lora(Node):
         
         msg_type, message, checksum = msg
 
-        # ACK may delay file transfert
         """
-        # Acknowledge received messages
+        # Acknowledge received messages, IT MAY DELAY FILE TRANSFERT
         self.get_logger().info(f"Complete message received: (type : {msg_type}) {message}.")
         self.lora.send_message(checksum, "ACK")
         """
 
+        # handle file transfert
         if "file" in msg_type or "picture" in msg_type:
             self.get_logger().info(f"Handling file transfert (received message type : {msg_type}) : {message}")
             self.handle_file_transfert(msg_type, message)
 
     
     def handle_file_transfert(self, message_type, message):
+        """
+        if message_type == "ask_for_file_transmission":
+        message = file path (string)
+            Try to read the file in binary mode and count the number of packets needed 
+            to send the file through LoRa antenna. Send a message 'file_info' to the ground station.
+
+        if message_type == "ask_for_picture":
+        message = picture compression factor (int)
+            Send a ros2 message on topic '/camera/ask_picture' containing the quality of the picture (compression factor).
+            The camera node will take a picture and send the binary data on topic '/camera/picture'.
+        
+        if message_type == "file_packet":
+        message = packet index (int)
+            Send the packet corresponding to the index to the ground station.
+        """
         if message_type == "ask_for_file_transmission":
             file_path = message
 
@@ -124,6 +147,11 @@ class lora(Node):
 
 
     def picture_received_from_camera(self, msg):
+        """
+        This function is called when a picture is received from the camera node.
+        It saves the picture (binary data) in a list of packets (list of bytearray)
+        and send a message "file_info" to the ground station with the number of packets.
+        """
         # when a picture (list of octets) is received from camera (after asking for it)
         self.get_logger().info("Picture received from camera.")
         data = bytearray(msg.data)
@@ -138,13 +166,18 @@ class lora(Node):
                 
 
     def save_packets_list(self, data):
-        # cut data and save the packets list in self.current_file_packets
+        """
+        Cut data and save the packets list in self.current_file_packets
+        """
         max_packet_size = self.lora.packet_size - self.lora.wrapper_size - 2 # on ajoute 2 octets pour le numéro du packet
         self.current_file_packets = [data[i:i+max_packet_size] for i in range(0, len(data), max_packet_size)]
         return len(self.current_file_packets)
 
     
     def destroy_node(self):
+        """
+        Close properly LoRa module and GPIO pins.
+        """
         if self.is_valid:
 
             # close serial connection
@@ -168,9 +201,11 @@ def main(args=None):
             rclpy.spin(lora_node)
 
     except KeyboardInterrupt:
+        lora_node.destroy_node()
         lora_node.get_logger().warn('LoRa node interrupted and is shutting down...')
 
     finally:
         if rclpy.ok():  # if the node is still running
+            lora_node.destroy_node()
             time.sleep(1)  # wait for logs to be sent
             rclpy.shutdown()

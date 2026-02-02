@@ -56,24 +56,24 @@ class TemperatureHumidityNode(Node):
             self.get_logger().info(f'Temperature and Humidity node n°{self.sensor_id} has been started.')
 
     def send_sensor_values(self):
+        """
+        Try to read the sensor values and publish them on topics
+        '/temp_hum_sensor_#/temperature' and '/temp_hum_sensor_#/humidity'. 
+        """
+        # The sensor and its library are old and may cause errors. We need to handle them.
         try: 
             self.sensor.measure()
             temp, hum = self.sensor.temperature, self.sensor.humidity
         except Exception as e:
             self.get_logger().warn(f"Failed to read sensor n°{self.sensor_id}. Error : {e}")
             return
-        
-        
 
+        # if no error occurs and data is available, publish the data
         if hum is not None and temp is not None:
-            msg_temp = Temperature()
-            msg_temp.temperature = float(temp)
-            msg_temp.variance = 0.0
+            msg_temp = Temperature(temperature=float(temp))
             self.temp_pub.publish(msg_temp)
 
-            msg_hum = RelativeHumidity()
-            msg_hum.relative_humidity= float(hum)/100
-            msg_hum.variance = 0.0
+            msg_hum = RelativeHumidity(humidity=float(hum)/100)
             self.hum_pub.publish(msg_hum)
         
             self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")

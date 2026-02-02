@@ -7,6 +7,10 @@ import RPi.GPIO as GPIO
 import time
 
 class motor_GPIOWrapper:
+    """
+    This class is a wrapper for the GPIO library to control the motor.
+    It is used to control the motor with the PWM and the direction pins more easily
+    """
     def __init__(self, pin_R, pin_L, pin_pwm):
         # initialisation des pins
         GPIO.setmode(GPIO.BCM)
@@ -69,13 +73,21 @@ class Motor(Node):
             self.get_logger().info('Motor node has been started.')
 
     def imu_callback(self, msg:Vector3):
+        """
+        When receiving data from the IMU (topic '/imu/orientation')
+        change the orientation and speed of the motor according to the yaw value (msg.x)
+        """
         self.get_logger().info('Received IMU data: %f, %f, %f' % (msg.x, msg.y, msg.z))
 
+        # THERE IS NO SCIENTIFIC REASON FOR THIS FORMULA, IT'S JUST A TEST
         pwm = int(100*msg.x / 360)
         self.get_logger().info(f"Setting motor speed to {pwm}%" )
         self.motor.setpwm(pwm)
 
     def destroy_node(self):
+        """
+        Clean up motor GPIO when the node is destroyed.
+        """
         if self.is_valid:
             self.motor.cleanup()
             self.get_logger().info('Motor GPIO cleaned up.')

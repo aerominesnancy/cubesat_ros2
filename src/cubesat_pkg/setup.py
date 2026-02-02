@@ -23,7 +23,9 @@ setup(
                       "cv2",
                       "os",
                       "struct",
-                      "serial"],
+                      "serial",
+                      "binascii",
+                      "threading"],
 
 
     zip_safe=True,

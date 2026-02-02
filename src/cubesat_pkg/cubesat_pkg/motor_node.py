@@ -68,6 +68,7 @@ class Motor(Node):
             self.create_subscription(Vector3, '/imu/orientation', self.imu_callback, 1)
 
             self.motor = motor_GPIOWrapper(pin_R, pin_L, pin_pwm)
+            self.target_angle = 0 # in degrees
 
             # log
             self.get_logger().info('Motor node has been started.')
@@ -79,9 +80,13 @@ class Motor(Node):
         """
         self.get_logger().info('Received IMU data: %f, %f, %f' % (msg.x, msg.y, msg.z))
 
-        # THERE IS NO SCIENTIFIC REASON FOR THIS FORMULA, IT'S JUST A TEST
-        pwm = int(100*msg.x / 360)
-        self.get_logger().info(f"Setting motor speed to {pwm}%" )
+        # angle error between -180 and 180
+        angle_error = (self.target_angle - msg.x + 180) % 360 - 180 
+        # pwm value between -100 and 100
+        pwm = abs(int(100*(angle_error) / 180))
+        
+        self.get_logger().info(f"Setting motor speed to {pwm}%", "(clockwise)" if angle_error>0 else "(counterclockwise)")
+        self.motor.clockwise() if angle_error>0 else self.motor.counterclockwise()
         self.motor.setpwm(pwm)
 
     def destroy_node(self):

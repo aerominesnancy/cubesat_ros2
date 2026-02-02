@@ -10,10 +10,9 @@ import os
 #os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '    \t{time} [{severity}][{name}] \t{message}'
 os.environ['RCUTILS_CONSOLE_OUTPUT_FORMAT'] = '    \t[{severity}]  [{name}]   \t{message}'
 
-# This function is always needed
+
 def generate_launch_description():
   
-  # Declare a variable Node for each node
   imu_node = Node(
     package="cubesat_pkg",
     executable="imu_node",

@@ -87,7 +87,7 @@ class Motor(Node):
         
         direction = "clockwise" if angle_error>0 else "counterclockwise"
         self.get_logger().info(f"Setting motor speed to {pwm}% ({direction})")
-        self.motor.clockwise() if angle_error>0 else self.motor.counterclockwise()
+        self.motor.clockwise() if angle_error>0 else self.motor.counterClockwise()
         self.motor.setpwm(pwm)
 
     def destroy_node(self):

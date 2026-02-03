@@ -73,7 +73,7 @@ class TemperatureHumidityNode(Node):
             msg_temp = Temperature(temperature=float(temp))
             self.temp_pub.publish(msg_temp)
 
-            msg_hum = RelativeHumidity(humidity=float(hum)/100)
+            msg_hum = RelativeHumidity(relative_humidity=float(hum)/100)
             self.hum_pub.publish(msg_hum)
         
             self.get_logger().info(f"Measure sensor {temp:.2f} °C and humidity {hum:.2f} %")

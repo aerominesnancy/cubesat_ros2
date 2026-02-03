@@ -120,7 +120,7 @@ class lora33S_config():
                         timeout=1)
         
         # wait module to be ready
-        self.wait_aux(self.pins)
+        self.wait_aux()
 
     def open_config_mode(self):
         """Put LoRa in configuration mode"""
@@ -148,7 +148,7 @@ class lora33S_config():
         self.serial.flush()
         
         # wait module to be ready
-        self.wait_aux(self.pins)
+        self.wait_aux()
 
     def read_configuration(self, pins):
         # send message to module and wait for response

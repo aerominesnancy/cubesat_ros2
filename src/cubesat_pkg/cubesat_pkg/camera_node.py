@@ -68,7 +68,7 @@ class camera(Node):
 
 
 
-    def take_picture(self, compression_factor = 50, save_file = True):
+    def take_picture(self, compression_factor = 50, save_file = True, try_number=0, max_try=5):
         """ 
         Take a picture with a certain compression factor.
         If save_file == True, save the picture in the folder 'pictures' with the name 'test_{timestamp}.jpg'.
@@ -110,27 +110,26 @@ class camera(Node):
                     self.get_logger().warn("Failed to capture image from camera. Attempting to reconnect...")
                     self.close_connection()
 
-            else:
-                # if the camera is not detected
-                # the connection is reinitialized
-                self.get_logger().warn("Connection to camera lost. Attempting to reconnect...")
-                self.close_connection()
-        
-        # try tkaing a picture again 
-        time.sleep(0.5)
-        self.take_picture()
+                    # try tkaing a picture again 
+                    if try_number < max_try:
+                        time.sleep(0.5)
+                        self.take_picture(compression_factor, save_file, try_number + 1, max_try)
+
 
     def close_connection(self):
+        """
+        Close connection with camera.
+        """
         if self.cap is not None:
             self.cap.release()
             self.cap = None
             self.get_logger().info("Camera connection closed.")
 
-    def try_connect(self):
+    def try_connect(self, try_number=0, max_try=5):
         """
         This function try reconnect to the camera if it is disconnected.
         Check if the connection is successful and if the camera is detected.
-        Else it reinitialize the camera connection and wait for the next loop to reconnect.
+        Else it reinitialize the camera connection and try again (max number of try).
         """
         # try reconnecting to the camera
         self.cap = cv2.VideoCapture(0)
@@ -138,11 +137,18 @@ class camera(Node):
 
         # check if the camera has been successfully reconnected
         if self.cap.isOpened():
-            self.get_logger().warn("Camera re-initialized successfully.")
+            self.get_logger().info("Camera initialized successfully.")
         else: 
-            self.get_logger().error(f"Error re-initializing camera. Camera may be disconnected.")
-            self.cap.release()
-            self.cap = None
+            self.get_logger().warn(f"Error initializing camera. Try number {try_number}/{max_try}")
+            self.close_connection()
+            
+            if try_number < max_try:
+                time.sleep(0.5)
+                self.try_connect(try_number+1, max_try)
+            else:
+                self.get_logger().error("Max number of try reached. Camera not detected.")
+
+
 
 
     def destroy_node(self):
@@ -150,7 +156,7 @@ class camera(Node):
         Close the connection with the camera.
         """
         if self.is_valid:
-            self.cap.release()
+            self.close_connection()
 
             
         

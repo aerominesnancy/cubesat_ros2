@@ -29,13 +29,13 @@ def generate_launch_description():
     package="cubesat_pkg",
     executable="temp_hum_node",
     name="temp_hum_1",
-    parameters=[{'sensor_id': 1, 'gpio_pin': 4, 'callback_delay_second': 2.0}]
+    parameters=[{'sensor_id': 1, 'gpio_pin': 4, 'callback_delay_second': 5.0}]
   )
 
   camera_node = Node(
     package="cubesat_pkg",
     executable="camera_node",
-    parameters=[{'callback_delay_second': 5.0}]
+    parameters=[{'callback_delay_second': 30.0}]
   )
 
   lora_node = Node(
@@ -53,7 +53,7 @@ def generate_launch_description():
   gps_node = Node(
     package="cubesat_pkg",
     executable="gps_node",
-    parameters=[{'callback_delay_second': 2.0}]
+    parameters=[{'callback_delay_second': 10.0}]
   )
 
 

@@ -150,7 +150,7 @@ class camera(Node):
             
             if try_number < max_try:
                 time.sleep(0.5)
-                self.try_connect(try_number+1, max_try) 
+                return self.try_connect(try_number+1, max_try) 
             else:
                 self.get_logger().error(f"Failed to initialize camera after {max_try} attempts.")
                 return False

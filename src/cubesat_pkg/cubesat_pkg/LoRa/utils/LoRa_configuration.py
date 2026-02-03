@@ -100,120 +100,137 @@ WOR_CYCLE = {
 
 # ============================ Functions ============================
 
-def wait_aux(pins):
-    """Attend que le module soit prêt (AUX HIGH)"""
-    i = 0
-    print("Waiting AUX...")
-    while GPIO.input(pins["AUX"]) == GPIO.LOW:
-        print("busy",i)
-        i += 1
-        time.sleep(0.01)
-    print("AUX ok !\n")
+class lora33S_config():
+    def __init__(self, pins:dict):
+        self.pins = pins
 
+        # init GPIO
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        GPIO.setup(self.pins["M0"], GPIO.OUT)
+        GPIO.setup(self.pins["M1"], GPIO.OUT)
+        GPIO.setup(self.pins["AUX"], GPIO.IN)
 
+        # put LoRa in configuration mode
+        self.open_config_mode()
 
-def read_configuration_33S(pins):
-    print("\n\nLecture de la configuration")
-    GPIO.output(pins["M0"], GPIO.LOW)
-    GPIO.output(pins["M1"], GPIO.HIGH)
-    wait_aux(pins)
-    time.sleep(0.5)
-    
-    # Trame lecture
-    start = 0x00
-    end = 0x09
-    trame = bytes([0xC1, start, end])
-    ser.write(trame)
-    ser.flush()
-    
-    print("\nSended :", f"{trame[0]:02X}", f"(start:{trame[1]} end:{trame[2]})")
-    print(trame)
-    print()
-    
-    wait_aux(pins)
-    
-    # Lecture réponse
-    time.sleep(0.5)
-    
-    if ser.in_waiting > 0:
-        response = ser.read(ser.in_waiting)
+        # open serial connection
+        self.serial = serial.Serial(port='/dev/serial0',  # Raspberry Pi main UART
+                        baudrate=9600,
+                        timeout=1)
         
-        if response == b'\xff\xff\xff':
-            print("/!\ \tla requete n'a pas un format valide")
+        # wait module to be ready
+        self.wait_aux(self.pins)
+
+    def open_config_mode(self):
+        """Put LoRa in configuration mode"""
+        GPIO.output(self.pins["M0"], GPIO.LOW)
+        GPIO.output(self.pins["M1"], GPIO.HIGH)
+
+    def wait_aux(self):
+        """Attend que le module soit prêt (AUX HIGH)"""
+        i = 0
+        print("Waiting AUX...")
+        while GPIO.input(self.pins["AUX"]) == GPIO.LOW:
+            print("busy",i)
+            i += 1
+            time.sleep(0.01)
+        print("AUX ok !")
+
+    def ask_for_configuration(self):
+        # create config message
+        start = 0x00
+        end = 0x09
+        trame = bytes([0xC1, start, end])
+        
+        # send message
+        self.serial.write(trame)
+        self.serial.flush()
+        
+        # wait module to be ready
+        self.wait_aux(self.pins)
+
+    def read_configuration(self, pins):
+        # send message to module and wait for response
+        self.ask_for_configuration()
+        time.sleep(0.1)
+        
+        if self.serial.in_waiting > 0:
+            response = self.serial.read(self.serial.in_waiting)
+            
+            if response == b'\xff\xff\xff':
+                print("/!\ \tla requete n'a pas un format valide")
+            else:
+                beautifull_print(response)
         else:
-            
-            print("\n========================== Response ==========================")
-            print(response)
-            print(f"CMD : {response[0]:02X}")
-            print(f"start:{response[1]}\t\tend : {response[2]}")
+            print("Aucune réponse du module")
 
-            print(f"\nADDH : {response[3]}\t\tADDL : {response[4]}")
-            print(f"\nNETID : {response[5]}")
-            
-            reg0 = response[6]
-            print(f"\nREG0 = {reg0}")
-            print("bits :", f"{reg0:08b}"[:3], "|", f"{reg0:08b}"[3:5], "|", f"{reg0:08b}"[5:])
-            print(f"UART baudrate : {UART_BAUD.get((reg0 >> 5) & 0b111, 'Unknown')}")
-            print(f"Parité        : {PARITY.get((reg0 >> 3) & 0b11, 'Unknown')}")
-            print(f"Air data rate : {AIR_RATE.get(reg0 & 0b111, 'Unknown')}")
+    def open_basic_mode(self):
+        GPIO.output(self.pins["M0"], GPIO.LOW)
+        GPIO.output(self.pins["M1"], GPIO.LOW)
 
-            reg1 = response[7]
-            print(f"\nREG1 = {reg1}")
-            print("bits :", f"{reg1:08b}"[:2], "|", f"{reg1:08b}"[2], "|", f"{reg1:08b}"[2:5], "|", f"{reg1:08b}"[6:])
-            print(f"Sub-packet setting : {SUB_PACKET_SETTING.get((reg1 >> 6) & 0b111, 'Unknown')}")
-            print(f"RSSI ambient noise : {RSSI_AMBIENT_NOISE.get((reg1 >> 5) & 0b1, 'Unknown')}")
-            print(f"Transmitting power : {TRANSMITTING_POWER.get(reg1 & 0b11, 'Unknown')}")
-            
-            reg3 = response[8]
-            print(f"\nREG2 : Chanel {reg3}", "(default)" if reg3==23 else "")
-            print(f"frequency = {410.125 + reg3}MHz \t(freq = 410.125 + chanel)")
+    def close(self):
+        GPIO.cleanup()
+        
 
-            reg3 = response[9]
-            print(f"\nREG3 = {reg3}")
-            print("bits :", f"{reg3:08b}"[0], "|", f"{reg3:08b}"[1], "|", f"{reg3:08b}"[2], "|", f"{reg3:08b}"[3], "|", f"{reg3:08b}"[4], "|", f"{reg3:08b}"[5:])
-            print(f"Enable RSSI              : {ENABLE_RSSI.get((reg3 >> 7) & 0b1, 'Unknown')}")
-            print(f"Fixed point transmission : {TRANSMISSION_MODE.get((reg3 >> 6) & 0b1, 'Unknown')}")
-            print(f"Enable repeater          : {ENABLE_REPEATER.get((reg3 >>  5) & 0b1, 'Unknown')}")
-            print(f"LBT enable               : {LBT_ENABLE.get((reg3 >> 4) & 0b1, 'Unknown')}")
-            print(f"WOR transceiver control  : {WOR_TRANSCEIVER_CONTROL.get((reg3 >> 3) & 0b1, 'Unknown')}")
-            print(f"WOR cycle                : {WOR_CYCLE.get(reg3 & 0b111, 'Unknown')}")
 
-            print(f"\nCRYPT_H : {response[10]}\tCRYPT_L : {response[11]}")
-            
-            print("==============================================================\n")
-    else:
-        print("Aucune réponse du module")
+def beautifull_print(response):
+    """Parse the response of the LoRa module and print it in a readable format."""
 
-    GPIO.output(pins["M0"], GPIO.LOW)
-    GPIO.output(pins["M1"], GPIO.LOW)
+    print("\n========================== Response ==========================")
+    print(response)
+    print(f"CMD : {response[0]:02X}")
+    print(f"start:{response[1]}\t\tend : {response[2]}")
+
+    print(f"\nADDH : {response[3]}\t\tADDL : {response[4]}")
+    print(f"\nNETID : {response[5]}")
+    
+    reg0 = response[6]
+    print(f"\nREG0 = {reg0}")
+    print("bits :", f"{reg0:08b}"[:3], "|", f"{reg0:08b}"[3:5], "|", f"{reg0:08b}"[5:])
+    print(f"UART baudrate : {UART_BAUD.get((reg0 >> 5) & 0b111, 'Unknown')}")
+    print(f"Parité        : {PARITY.get((reg0 >> 3) & 0b11, 'Unknown')}")
+    print(f"Air data rate : {AIR_RATE.get(reg0 & 0b111, 'Unknown')}")
+
+    reg1 = response[7]
+    print(f"\nREG1 = {reg1}")
+    print("bits :", f"{reg1:08b}"[:2], "|", f"{reg1:08b}"[2], "|", f"{reg1:08b}"[2:5], "|", f"{reg1:08b}"[6:])
+    print(f"Sub-packet setting : {SUB_PACKET_SETTING.get((reg1 >> 6) & 0b111, 'Unknown')}")
+    print(f"RSSI ambient noise : {RSSI_AMBIENT_NOISE.get((reg1 >> 5) & 0b1, 'Unknown')}")
+    print(f"Transmitting power : {TRANSMITTING_POWER.get(reg1 & 0b11, 'Unknown')}")
+    
+    reg3 = response[8]
+    print(f"\nREG2 : Chanel {reg3}", "(default)" if reg3==23 else "")
+    print(f"frequency = {410.125 + reg3}MHz \t(freq = 410.125 + chanel)")
+
+    reg3 = response[9]
+    print(f"\nREG3 = {reg3}")
+    print("bits :", f"{reg3:08b}"[0], "|", f"{reg3:08b}"[1], "|", f"{reg3:08b}"[2], "|", f"{reg3:08b}"[3], "|", f"{reg3:08b}"[4], "|", f"{reg3:08b}"[5:])
+    print(f"Enable RSSI              : {ENABLE_RSSI.get((reg3 >> 7) & 0b1, 'Unknown')}")
+    print(f"Fixed point transmission : {TRANSMISSION_MODE.get((reg3 >> 6) & 0b1, 'Unknown')}")
+    print(f"Enable repeater          : {ENABLE_REPEATER.get((reg3 >>  5) & 0b1, 'Unknown')}")
+    print(f"LBT enable               : {LBT_ENABLE.get((reg3 >> 4) & 0b1, 'Unknown')}")
+    print(f"WOR transceiver control  : {WOR_TRANSCEIVER_CONTROL.get((reg3 >> 3) & 0b1, 'Unknown')}")
+    print(f"WOR cycle                : {WOR_CYCLE.get(reg3 & 0b111, 'Unknown')}")
+
+    print(f"\nCRYPT_H : {response[10]}\tCRYPT_L : {response[11]}")
+    
+    print("==============================================================\n")
+    
+
 
 
 if __name__ == "__main__":
 
-    print("Run program ...")
-
-    # init GPIO
-    pins = {"MO" : 17,
-            "M1" : 27,
-            "AUX" : 22}
-    
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    GPIO.setup(pins["M0"], GPIO.OUT)
-    GPIO.setup(pins["M1"], GPIO.OUT)
-    GPIO.setup(pins["AUX"], GPIO.IN)
-
-    # init serial connection
-    ser = serial.Serial(port='/dev/serial0',  # Raspberry Pi UART
-                        baudrate=9600,
-                        timeout=1)
+    # init lora in config mode
+    lora = lora33S_config({"MO" : 17, "M1" : 27, "AUX" : 22})
 
     # read configuration
-    read_configuration_33S()
+    print("Asking for configuration to LoRa module, please wait a few seconds...")
+    lora.read_configuration()
 
     # Clean up GPIO
-    GPIO.cleanup()
-    print("\n End of program.")
+    lora.close()
 
 
 

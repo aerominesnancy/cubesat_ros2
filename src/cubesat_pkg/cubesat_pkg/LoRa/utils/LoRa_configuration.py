@@ -150,7 +150,7 @@ class lora33S_config():
         # wait module to be ready
         self.wait_aux()
 
-    def read_configuration(self, pins):
+    def read_configuration(self):
         # send message to module and wait for response
         self.ask_for_configuration()
         time.sleep(0.1)

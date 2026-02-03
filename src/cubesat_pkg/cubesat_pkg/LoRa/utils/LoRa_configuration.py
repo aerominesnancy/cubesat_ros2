@@ -223,7 +223,7 @@ def beautifull_print(response):
 if __name__ == "__main__":
 
     # init lora in config mode
-    lora = lora33S_config({"MO" : 17, "M1" : 27, "AUX" : 22})
+    lora = lora33S_config({"M0" : 17, "M1" : 27, "AUX" : 22})
 
     # read configuration
     print("Asking for configuration to LoRa module, please wait a few seconds...")

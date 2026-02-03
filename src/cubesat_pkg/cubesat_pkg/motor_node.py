@@ -83,7 +83,7 @@ class Motor(Node):
         # angle error between -180 and 180
         angle_error = (self.target_angle - msg.x + 180) % 360 - 180 
         # pwm value between -100 and 100
-        pwm = abs(int(100*(angle_error) / 180))
+        pwm = abs(int(100* ((angle_error) / 180)**2))
         
         direction = "clockwise" if angle_error>0 else "counterclockwise"
         self.get_logger().info(f"Setting motor speed to {pwm}% ({direction})")

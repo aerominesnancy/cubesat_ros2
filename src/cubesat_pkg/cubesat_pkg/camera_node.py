@@ -74,6 +74,9 @@ class camera(Node):
         If save_file == True, save the picture in the folder 'pictures' with the name 'test_{timestamp}.jpg'.
         Else, return the picture as a bytearray object.
         """
+        self.try_connect()
+        time.sleep(0.5)
+
         if self.cap is not None:
             if self.cap.isOpened():
 
@@ -87,35 +90,43 @@ class camera(Node):
                         cv2.imwrite(self.path + file_name, frame, [cv2.IMWRITE_JPEG_QUALITY, compression_factor])
 
                         self.get_logger().info(f"Picture taken and saved as '{file_name}'")
+                        self.close_connection()
                         return
                     else:
 
                         success, jpeg_binary = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), compression_factor])
                         if not success:
                             self.get_logger().error(f"Error in picture compression. Returning None.")
+                            self.close_connection()
                             return 
                         
                         self.get_logger().info(f"Picture taken and compressed successfully.")
+                        self.close_connection()
                         return bytearray(jpeg_binary)
 
                 else:
                     # if the camera is detected but the image was not captured successfully
                     # the connection is reinitialized
                     self.get_logger().warn("Failed to capture image from camera. Attempting to reconnect...")
-                    self.cap.release()
-                    self.cap = None
+                    self.close_connection()
 
             else:
                 # if the camera is not detected
                 # the connection is reinitialized
                 self.get_logger().warn("Connection to camera lost. Attempting to reconnect...")
-                self.cap.release()
-                self.cap = None
-            
-        self.try_reconnect()
+                self.close_connection()
+        
+        # try tkaing a picture again 
+        time.sleep(0.5)
+        self.take_picture()
 
+    def close_connection(self):
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+            self.get_logger().info("Camera connection closed.")
 
-    def try_reconnect(self):
+    def try_connect(self):
         """
         This function try reconnect to the camera if it is disconnected.
         Check if the connection is successful and if the camera is detected.

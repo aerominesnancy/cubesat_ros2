@@ -179,13 +179,8 @@ class lora(Node):
         Close properly LoRa module and GPIO pins.
         """
         if self.is_valid:
-
             # close serial connection
-            self.ser.close()
-
-            # clean GPIO
-            GPIO.cleanup([self.M0, self.M1, self.AUX])
-            self.get_logger().info('LoRa GPIO cleaned up.')
+            self.lora.close()
 
 
 

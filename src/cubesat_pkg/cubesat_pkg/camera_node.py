@@ -74,7 +74,9 @@ class camera(Node):
         If save_file == True, save the picture in the folder 'pictures' with the name 'test_{timestamp}.jpg'.
         Else, return the picture as a bytearray object.
         """
-        self.try_connect()
+        if not self.try_connect():
+            self.get_logger().error("Cannot take any picture.")
+            return
         time.sleep(0.5)
 
         if self.cap is not None:
@@ -107,13 +109,16 @@ class camera(Node):
                 else:
                     # if the camera is detected but the image was not captured successfully
                     # the connection is reinitialized
-                    self.get_logger().warn("Failed to capture image from camera. Attempting to reconnect...")
+                    self.get_logger().warn(f"Failed to capture image from camera. Try number {try_number+1}/{max_try}")
                     self.close_connection()
 
                     # try tkaing a picture again 
                     if try_number < max_try:
                         time.sleep(0.5)
                         self.take_picture(compression_factor, save_file, try_number + 1, max_try)
+                    else:
+                        self.get_logger().error(f"Failed to capture image from camera after {max_try} tries. Returning None.")
+                        return
 
 
     def close_connection(self):
@@ -138,15 +143,17 @@ class camera(Node):
         # check if the camera has been successfully reconnected
         if self.cap.isOpened():
             self.get_logger().info("Camera initialized successfully.")
+            return True
         else: 
-            self.get_logger().warn(f"Error initializing camera. Try number {try_number}/{max_try}")
+            self.get_logger().warn(f"Error initializing camera. Try number {try_number+1}/{max_try}")
             self.close_connection()
             
             if try_number < max_try:
                 time.sleep(0.5)
-                self.try_connect(try_number+1, max_try)
+                self.try_connect(try_number+1, max_try) 
             else:
-                self.get_logger().error("Max number of try reached. Camera not detected.")
+                self.get_logger().error(f"Failed to initialize camera after {max_try} attempts.")
+                return False
 
 
 
